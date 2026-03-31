@@ -81,13 +81,13 @@ function WorkerDialog({
               <Input type="number" value={cost} onChange={e => setCost(e.target.value)} min="0" step="0.5" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Precio venta/hora (€) *</Label>
+              <Label className="text-xs">Precio venta/jornada (€) *</Label>
               <Input type="number" value={sale} onChange={e => setSale(e.target.value)} min="0" step="0.5" />
             </div>
           </div>
           {cost && sale && (
             <p className="text-xs text-muted-foreground">
-              Multiplicador: <strong>{multiplier}x</strong> — margen bruto por hora: <strong>{fmtCurrency(parseFloat(sale) - parseFloat(cost))}</strong>
+              Multiplicador: <strong>{multiplier}x</strong> — margen bruto por jornada: <strong>{fmtCurrency(parseFloat(sale) - parseFloat(cost))}</strong>
             </p>
           )}
           <div className="space-y-1.5">
@@ -249,11 +249,11 @@ export default function TeamPage() {
                         </div>
                         <div className="flex items-center gap-6 text-sm">
                           <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Coste/h</p>
+                            <p className="text-xs text-muted-foreground">Coste/j</p>
                             <p className="font-medium">{fmtCurrency(w.costPerDay)}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Venta/h</p>
+                            <p className="text-xs text-muted-foreground">Venta/j</p>
                             <p className="font-semibold">{fmtCurrency(w.salePricePerDay)}</p>
                           </div>
                           <div className="text-right">
