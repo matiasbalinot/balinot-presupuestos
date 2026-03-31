@@ -2,7 +2,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import {
   BarChart3,
-  Building2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -16,8 +15,8 @@ import {
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
-const LOGO_PRIMARY = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-primary_83b11035.svg";
-const LOGO_TERTIARY = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-tertiary_c8782519.svg";
+const LOGO_WHITE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-tertiary-alt_ba62202d.svg";
+const LOGO_DARK = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-primary-dark_14393126.svg";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
@@ -37,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--brand-lightest)" }}>
         <div className="flex flex-col items-center gap-4">
-          <img src={LOGO_PRIMARY} alt="Balinot" className="h-8 opacity-60 animate-pulse" />
+          <img src={LOGO_DARK} alt="Balinot" className="h-8 opacity-60 animate-pulse" />
           <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
@@ -48,7 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--brand-lightest)" }}>
         <div className="flex flex-col items-center gap-6 p-8 bg-card rounded-xl shadow-lg border border-border max-w-sm w-full mx-4">
-          <img src={LOGO_PRIMARY} alt="Balinot" className="h-10" />
+          <img src={LOGO_DARK} alt="Balinot" className="h-10" />
           <div className="text-center">
             <h1 className="text-xl font-semibold text-foreground">Calculadora de presupuestos</h1>
             <p className="text-sm text-muted-foreground mt-1">Accede con tu cuenta de Balinot</p>
@@ -79,11 +78,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-4 py-5 border-b" style={{ borderColor: "oklch(20% 0.04 258)" }}>
           {!collapsed && (
-            <img src={LOGO_TERTIARY} alt="Balinot" className="h-6 object-contain" />
+            <img src={LOGO_WHITE} alt="Balinot" className="h-6 object-contain" />
           )}
           {collapsed && (
             <div className="w-full flex justify-center">
-              <Building2 className="w-5 h-5 text-white/60" />
+              <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/favicon_6ff5519f.svg" alt="B" className="w-6 h-6 object-contain" />
             </div>
           )}
           <button

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 function fmtH(h: number | string): string {
   const v = parseFloat(String(h ?? 0));
-  return isNaN(v) ? "0h" : `${v.toFixed(1)}h`;
+  return isNaN(v) ? "0j" : `${v.toFixed(2)}j`;
 }
 
 const EFFICIENCY_CONFIG: Record<string, { label: string; classes: string }> = {
@@ -38,7 +38,7 @@ export default function HistoryPage() {
 
   const totalProjects = (history as any[]).length;
   const avgTotalHours = totalProjects > 0
-    ? (history as any[]).reduce((s: number, h: any) => s + parseFloat(h.realTotalHours ?? "0"), 0) / totalProjects
+    ? (history as any[]).reduce((s: number, h: any) => s + parseFloat(h.realTotalDays ?? "0"), 0) / totalProjects
     : 0;
 
   return (
@@ -48,7 +48,7 @@ export default function HistoryPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Histórico de proyectos</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {totalProjects} proyectos · Media {fmtH(avgTotalHours)} por proyecto
+              {totalProjects} proyectos · Media {fmtH(avgTotalHours)} jornadas por proyecto
             </p>
           </div>
           {isAdmin && (
@@ -76,10 +76,10 @@ export default function HistoryPage() {
                 <p className="text-xs font-semibold text-foreground mb-3">{type.name}</p>
                 <div className="space-y-1.5">
                   {[
-                    { label: "SEO", hours: type.avgSeoHours, color: "bg-purple-400" },
-                    { label: "Diseño", hours: type.avgDesignHours, color: "bg-pink-400" },
-                    { label: "Dev", hours: type.avgDevHours, color: "bg-blue-400" },
-                    { label: "Varios", hours: type.avgVariousHours, color: "bg-orange-400" },
+                    { label: "SEO", hours: type.avgSeoDays, color: "bg-purple-400" },
+                    { label: "Diseño", hours: type.avgDesignDays, color: "bg-pink-400" },
+                    { label: "Dev", hours: type.avgDevDays, color: "bg-blue-400" },
+                    { label: "Varios", hours: type.avgVariousDays, color: "bg-orange-400" },
                   ].map(({ label, hours, color }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${color}`} />
@@ -93,10 +93,10 @@ export default function HistoryPage() {
                     <span className="text-muted-foreground">Total medio</span>
                     <span className="font-semibold">
                       {fmtH(
-                        parseFloat(type.avgSeoHours ?? "0") +
-                        parseFloat(type.avgDesignHours ?? "0") +
-                        parseFloat(type.avgDevHours ?? "0") +
-                        parseFloat(type.avgVariousHours ?? "0")
+                        parseFloat(type.avgSeoDays ?? "0") +
+                        parseFloat(type.avgDesignDays ?? "0") +
+                        parseFloat(type.avgDevDays ?? "0") +
+                        parseFloat(type.avgVariousDays ?? "0")
                       )}
                     </span>
                   </div>
@@ -139,11 +139,11 @@ export default function HistoryPage() {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">Proyecto</th>
                       <th className="text-center py-2 px-3 text-xs font-medium text-muted-foreground">Tipología</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">SEO</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Diseño</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Dev</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Varios</th>
-                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Total</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">SEO (j)</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Diseño (j)</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Dev (j)</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Varios (j)</th>
+                      <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground">Total (j)</th>
                       <th className="text-center py-2 px-3 text-xs font-medium text-muted-foreground">Estado</th>
                     </tr>
                   </thead>
@@ -184,11 +184,11 @@ export default function HistoryPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realSeoHours)}</td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realDesignHours)}</td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realDevHours)}</td>
-                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realVariousHours)}</td>
-                          <td className="py-2.5 px-3 text-right font-semibold">{fmtH(h.realTotalHours)}</td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realSeoDays)}</td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realDesignDays)}</td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realDevDays)}</td>
+                          <td className="py-2.5 px-3 text-right text-muted-foreground">{fmtH(h.realVariousDays)}</td>
+                          <td className="py-2.5 px-3 text-right font-semibold">{fmtH(h.realTotalDays)}</td>
                           <td className="py-2.5 px-3 text-center">
                             {eff ? (
                               <span className={`px-2 py-0.5 rounded-full text-xs border ${eff.classes}`}>

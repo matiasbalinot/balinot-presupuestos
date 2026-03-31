@@ -290,7 +290,7 @@ export async function recalcProjectTypeAverages(projectTypeId: number) {
   const rows = await db
     .select()
     .from(projectHistory)
-    .where(and(eq(projectHistory.projectTypeId, projectTypeId), sql`realTotalHours > 0`));
+    .where(and(eq(projectHistory.projectTypeId, projectTypeId), sql`realTotalDays > 0`));
 
   if (rows.length === 0) return;
 
@@ -300,10 +300,10 @@ export async function recalcProjectTypeAverages(projectTypeId: number) {
   await db
     .update(projectTypes)
     .set({
-      avgSeoHours: String(avg("realSeoHours").toFixed(2)),
-      avgDesignHours: String(avg("realDesignHours").toFixed(2)),
-      avgDevHours: String(avg("realDevHours").toFixed(2)),
-      avgVariousHours: String(avg("realVariousHours").toFixed(2)),
+      avgSeoDays: String(avg("realSeoDays").toFixed(2)),
+      avgDesignDays: String(avg("realDesignDays").toFixed(2)),
+      avgDevDays: String(avg("realDevDays").toFixed(2)),
+      avgVariousDays: String(avg("realVariousDays").toFixed(2)),
       sampleCount: rows.length,
       lastSyncedAt: new Date(),
     })

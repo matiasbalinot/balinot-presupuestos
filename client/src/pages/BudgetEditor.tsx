@@ -34,9 +34,9 @@ interface BudgetLine {
   workerId: number | null;
   area: Area;
   description: string;
-  estimatedHours: string;
-  costPerHour: string;
-  salePricePerHour: string;
+  estimatedDays: string;
+  costPerDay: string;
+  salePricePerDay: string;
   lineCost: string;
   lineSale: string;
   isFixedPrice: boolean;
@@ -82,9 +82,9 @@ function calcLine(line: BudgetLine): BudgetLine {
     const fp = parseFloat(line.fixedPrice) || 0;
     return { ...line, lineCost: fmt(fp * 0.6), lineSale: fmt(fp) };
   }
-  const hours = parseFloat(line.estimatedHours) || 0;
-  const cost = parseFloat(line.costPerHour) || 0;
-  const sale = parseFloat(line.salePricePerHour) || 0;
+  const hours = parseFloat(line.estimatedDays) || 0;
+  const cost = parseFloat(line.costPerDay) || 0;
+  const sale = parseFloat(line.salePricePerDay) || 0;
   return { ...line, lineCost: fmt(hours * cost), lineSale: fmt(hours * sale) };
 }
 
@@ -132,9 +132,9 @@ export default function BudgetEditor() {
       const existingLines: BudgetLine[] = ((existingBudget as any).lines ?? []).map((l: any) => ({
         ...l,
         tempId: uid(),
-        estimatedHours: String(l.estimatedHours ?? "0"),
-        costPerHour: String(l.costPerHour ?? "0"),
-        salePricePerHour: String(l.salePricePerHour ?? "0"),
+        estimatedDays: String(l.estimatedDays ?? "0"),
+        costPerDay: String(l.costPerDay ?? "0"),
+        salePricePerDay: String(l.salePricePerDay ?? "0"),
         lineCost: String(l.lineCost ?? "0"),
         lineSale: String(l.lineSale ?? "0"),
         fixedPrice: String(l.fixedPrice ?? "0"),
@@ -155,45 +155,45 @@ export default function BudgetEditor() {
 
     // SEO workers
     const seoWorkers = workers.filter((w: any) => w.department === "seo");
-    if (parseFloat(type.avgSeoHours) > 0 && seoWorkers.length > 0) {
+    if (parseFloat(type.avgSeoDays) > 0 && seoWorkers.length > 0) {
       const w = seoWorkers[0];
       newLines.push(calcLine({
         tempId: uid(), workerId: w.id, area: "seo",
         description: `SEO — ${w.name}`,
-        estimatedHours: fmt(parseFloat(type.avgSeoHours) / seoWorkers.length),
-        costPerHour: String(w.costPerHour), salePricePerHour: String(w.salePricePerHour),
+        estimatedDays: fmt(parseFloat(type.avgSeoDays) / seoWorkers.length),
+        costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
         lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
       }));
     }
 
     // Design workers
     const designWorkers = workers.filter((w: any) => w.department === "design");
-    if (parseFloat(type.avgDesignHours) > 0 && designWorkers.length > 0) {
+    if (parseFloat(type.avgDesignDays) > 0 && designWorkers.length > 0) {
       const w = designWorkers[0];
       newLines.push(calcLine({
         tempId: uid(), workerId: w.id, area: "design",
         description: `Diseño — ${w.name}`,
-        estimatedHours: fmt(parseFloat(type.avgDesignHours) / designWorkers.length),
-        costPerHour: String(w.costPerHour), salePricePerHour: String(w.salePricePerHour),
+        estimatedDays: fmt(parseFloat(type.avgDesignDays) / designWorkers.length),
+        costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
         lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
       }));
     }
 
     // Dev workers
     const devWorkers = workers.filter((w: any) => w.department === "development");
-    if (parseFloat(type.avgDevHours) > 0 && devWorkers.length > 0) {
+    if (parseFloat(type.avgDevDays) > 0 && devWorkers.length > 0) {
       const w = devWorkers[0];
       newLines.push(calcLine({
         tempId: uid(), workerId: w.id, area: "development",
         description: `Desarrollo — ${w.name}`,
-        estimatedHours: fmt(parseFloat(type.avgDevHours) / devWorkers.length),
-        costPerHour: String(w.costPerHour), salePricePerHour: String(w.salePricePerHour),
+        estimatedDays: fmt(parseFloat(type.avgDevDays) / devWorkers.length),
+        costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
         lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
       }));
     }
 
     if (newLines.length > 0) setLines(newLines);
-    toast.info(`Horas sugeridas basadas en ${type.sampleCount ?? 0} proyectos similares`);
+    toast.info(`Jornadas sugeridas basadas en ${type.sampleCount ?? 0} proyectos similares`);
   };
 
   // Add line
@@ -209,9 +209,9 @@ export default function BudgetEditor() {
     const newLine: BudgetLine = calcLine({
       tempId: uid(), workerId: w?.id ?? null, area,
       description: `${AREA_LABELS[area]}${w ? ` — ${w.name}` : ""}`,
-      estimatedHours: "0",
-      costPerHour: String(w?.costPerHour ?? "0"),
-      salePricePerHour: String(w?.salePricePerHour ?? "0"),
+      estimatedDays: "0",
+      costPerDay: String(w?.costPerDay ?? "0"),
+      salePricePerDay: String(w?.salePricePerDay ?? "0"),
       lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0",
       sortOrder: lines.length,
     });
@@ -226,8 +226,8 @@ export default function BudgetEditor() {
       if (changes.workerId !== undefined) {
         const w = workers.find((w: any) => w.id === changes.workerId);
         if (w) {
-          updated.costPerHour = String(w.costPerHour);
-          updated.salePricePerHour = String(w.salePricePerHour);
+          updated.costPerDay = String(w.costPerDay);
+          updated.salePricePerDay = String(w.salePricePerDay);
           updated.description = `${AREA_LABELS[updated.area]} — ${w.name}`;
         }
       }
@@ -314,9 +314,9 @@ export default function BudgetEditor() {
           workerId: l.workerId,
           area: l.area,
           description: l.description,
-          estimatedHours: l.estimatedHours,
-          costPerHour: l.costPerHour,
-          salePricePerHour: l.salePricePerHour,
+          estimatedDays: l.estimatedDays,
+          costPerDay: l.costPerDay,
+          salePricePerDay: l.salePricePerDay,
           lineCost: l.lineCost,
           lineSale: l.lineSale,
           isFixedPrice: l.isFixedPrice,
@@ -341,7 +341,7 @@ export default function BudgetEditor() {
       const result = await llmMutation.mutateAsync({
         projectTypeSlug: (type as any)?.slug ?? "web-corporativa",
         projectName,
-        currentLines: lines.map(l => ({ area: l.area, description: l.description, estimatedHours: l.estimatedHours })),
+        currentLines: lines.map(l => ({ area: l.area, description: l.description, estimatedDays: l.estimatedDays })),
       });
       setRecommendations(String(result.recommendations ?? ""));
     } catch {
@@ -460,7 +460,7 @@ export default function BudgetEditor() {
                   </Select>
                   {projectTypeId && (
                     <p className="text-xs text-muted-foreground">
-                      Horas sugeridas basadas en histórico real
+                      Jornadas sugeridas basadas en histórico real
                     </p>
                   )}
                 </div>
@@ -536,9 +536,9 @@ export default function BudgetEditor() {
                       {/* Column headers */}
                       <div className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 px-1">
                         <span className="text-xs text-muted-foreground">Descripción / Trabajador</span>
-                        <span className="text-xs text-muted-foreground text-center">Horas</span>
-                        <span className="text-xs text-muted-foreground text-right">€/h coste</span>
-                        <span className="text-xs text-muted-foreground text-right">€/h venta</span>
+                        <span className="text-xs text-muted-foreground text-center">Jornadas</span>
+                        <span className="text-xs text-muted-foreground text-right">€/j coste</span>
+                        <span className="text-xs text-muted-foreground text-right">€/j venta</span>
                         <span className="text-xs text-muted-foreground text-right">Coste</span>
                         <span className="text-xs text-muted-foreground text-right">Venta</span>
                         <span />
@@ -572,31 +572,31 @@ export default function BudgetEditor() {
                             </Select>
                           </div>
 
-                          {/* Hours */}
+                          {/* Days */}
                           <Input
                             type="number"
-                            value={line.estimatedHours}
-                            onChange={e => updateLine(line.tempId, { estimatedHours: e.target.value })}
+                            value={line.estimatedDays}
+                            onChange={e => updateLine(line.tempId, { estimatedDays: e.target.value })}
                             className="h-7 text-xs text-center"
                             min="0" step="0.5"
                             disabled={line.isFixedPrice}
                           />
 
-                          {/* Cost/h */}
+                          {/* Cost/day */}
                           <Input
                             type="number"
-                            value={line.costPerHour}
-                            onChange={e => updateLine(line.tempId, { costPerHour: e.target.value })}
+                            value={line.costPerDay}
+                            onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
                             className="h-7 text-xs text-right"
                             min="0"
                             disabled={line.isFixedPrice}
                           />
 
-                          {/* Sale/h */}
+                          {/* Sale/day */}
                           <Input
                             type="number"
-                            value={line.salePricePerHour}
-                            onChange={e => updateLine(line.tempId, { salePricePerHour: e.target.value })}
+                            value={line.salePricePerDay}
+                            onChange={e => updateLine(line.tempId, { salePricePerDay: e.target.value })}
                             className="h-7 text-xs text-right"
                             min="0"
                             disabled={line.isFixedPrice}
@@ -724,7 +724,7 @@ export default function BudgetEditor() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mt-2">
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-red-700">
-                      Margen por debajo del 20%. Revisa las horas o ajusta el precio antes de enviar.
+                      Margen por debajo del 20%. Revisa las jornadas o ajusta el precio antes de enviar.
                     </p>
                   </div>
                 )}
@@ -739,7 +739,7 @@ export default function BudgetEditor() {
               <CardContent className="space-y-2">
                 {areaGroups.map(area => {
                   const areaLines = linesByArea(area);
-                  const totalH = areaLines.reduce((s, l) => s + parseFloat(l.estimatedHours || "0"), 0);
+                  const totalH = areaLines.reduce((s, l) => s + parseFloat(l.estimatedDays || "0"), 0);
                   const totalS = areaLines.reduce((s, l) => s + parseFloat(l.lineSale || "0"), 0);
                   if (totalH === 0 && totalS === 0) return null;
                   return (

@@ -50,8 +50,8 @@ const workersRouter = router({
         id: z.number().optional(),
         name: z.string().min(1),
         department: z.enum(["seo", "design", "development", "management", "various"]),
-        costPerHour: z.string(),
-        salePricePerHour: z.string(),
+        costPerDay: z.string(),
+        salePricePerDay: z.string(),
         clockifyUserId: z.string().optional(),
         clockifyUserEmail: z.string().optional(),
         isActive: z.boolean().optional(),
@@ -70,10 +70,10 @@ const projectTypesRouter = router({
         id: z.number().optional(),
         name: z.string().min(1),
         slug: z.string().min(1),
-        avgSeoHours: z.string().optional(),
-        avgDesignHours: z.string().optional(),
-        avgDevHours: z.string().optional(),
-        avgVariousHours: z.string().optional(),
+        avgSeoDays: z.string().optional(),
+        avgDesignDays: z.string().optional(),
+        avgDevDays: z.string().optional(),
+        avgVariousDays: z.string().optional(),
       })
     )
     .mutation(({ input }) => upsertProjectType(input as any)),
@@ -119,9 +119,9 @@ const BudgetLineInput = z.object({
   workerId: z.number().nullable().optional(),
   area: z.enum(["seo", "design", "development", "management", "commission", "various", "fixed"]),
   description: z.string(),
-  estimatedHours: z.string().optional(),
-  costPerHour: z.string().optional(),
-  salePricePerHour: z.string().optional(),
+  estimatedDays: z.string().optional(),
+  costPerDay: z.string().optional(),
+  salePricePerDay: z.string().optional(),
   lineCost: z.string().optional(),
   lineSale: z.string().optional(),
   isFixedPrice: z.boolean().optional(),
@@ -273,9 +273,9 @@ const holdedRouter = router({
         .filter((l: any) => l.area !== "commission" && l.area !== "management")
         .map((l: any) => ({
           name: l.description,
-          desc: l.isFixedPrice ? "Precio fijo" : `${parseFloat(l.estimatedHours ?? "0").toFixed(1)} horas`,
-          units: l.isFixedPrice ? 1 : parseFloat(l.estimatedHours ?? "0"),
-          price: l.isFixedPrice ? parseFloat(l.fixedPrice ?? "0") : parseFloat(l.salePricePerHour ?? "0"),
+          desc: l.isFixedPrice ? "Precio fijo" : `${parseFloat(l.estimatedDays ?? "0").toFixed(2)} jornadas`,
+          units: l.isFixedPrice ? 1 : parseFloat(l.estimatedDays ?? "0"),
+          price: l.isFixedPrice ? parseFloat(l.fixedPrice ?? "0") : parseFloat(l.salePricePerDay ?? "0"),
           tax: 21,
         }));
 
@@ -432,19 +432,27 @@ const clockifyRouter = router({
           const totalH = seoH + designH + devH + variousH;
           if (totalH < 0.1) continue;
 
-          const efficiency = totalH > 0
-            ? totalH < 20 ? "efficient" : totalH < 40 ? "correct" : "excess"
+          // Convert hours to workdays (8h = 1 day)
+          const HOURS_PER_DAY = 8;
+          const seoDays = seoH / HOURS_PER_DAY;
+          const designDays = designH / HOURS_PER_DAY;
+          const devDays = devH / HOURS_PER_DAY;
+          const variousDays = variousH / HOURS_PER_DAY;
+          const totalDays = totalH / HOURS_PER_DAY;
+
+          const efficiency = totalDays > 0
+            ? totalDays < 2.5 ? "efficient" : totalDays < 5 ? "correct" : "excess"
             : undefined;
 
           await upsertProjectHistory({
             clockifyProjectId: project.id,
             projectName: project.name,
             projectTypeId: input.projectTypeId ?? null,
-            realSeoHours: String(seoH.toFixed(2)),
-            realDesignHours: String(designH.toFixed(2)),
-            realDevHours: String(devH.toFixed(2)),
-            realVariousHours: String(variousH.toFixed(2)),
-            realTotalHours: String(totalH.toFixed(2)),
+            realSeoDays: String(seoDays.toFixed(2)),
+            realDesignDays: String(designDays.toFixed(2)),
+            realDevDays: String(devDays.toFixed(2)),
+            realVariousDays: String(variousDays.toFixed(2)),
+            realTotalDays: String(totalDays.toFixed(2)),
             efficiencyStatus: efficiency as any,
             syncedAt: new Date(),
           } as any);
@@ -488,7 +496,7 @@ const llmRouter = router({
       z.object({
         projectTypeSlug: z.string(),
         projectName: z.string(),
-        currentLines: z.array(z.object({ area: z.string(), description: z.string(), estimatedHours: z.string() })),
+        currentLines: z.array(z.object({ area: z.string(), description: z.string(), estimatedDays: z.string() })),
       })
     )
     .mutation(async ({ input }) => {
@@ -498,17 +506,17 @@ const llmRouter = router({
 
       const historyContext = history
         .slice(0, 20)
-        .map((h) => `- ${h.projectName}: SEO ${h.realSeoHours}h, Diseño ${h.realDesignHours}h, Dev ${h.realDevHours}h (${h.efficiencyStatus ?? "sin estado"})`)
+        .map((h) => `- ${h.projectName}: SEO ${(h as any).realSeoDays}j, Diseño ${(h as any).realDesignDays}j, Dev ${(h as any).realDevDays}j (${h.efficiencyStatus ?? "sin estado"})`)
         .join("\n");
 
       const prompt = `Eres un consultor experto en agencias de diseño y desarrollo web. Analiza el siguiente presupuesto y el histórico de proyectos similares para dar recomendaciones concretas.
 
 PROYECTO: ${input.projectName}
 TIPOLOGÍA: ${type?.name ?? input.projectTypeSlug}
-MEDIAS HISTÓRICAS: SEO ${type?.avgSeoHours ?? 0}h, Diseño ${type?.avgDesignHours ?? 0}h, Desarrollo ${type?.avgDevHours ?? 0}h
+MEDIAS HISTÓRICAS: SEO ${(type as any)?.avgSeoDays ?? 0}j, Diseño ${(type as any)?.avgDesignDays ?? 0}j, Desarrollo ${(type as any)?.avgDevDays ?? 0}j
 
 LÍNEAS ACTUALES DEL PRESUPUESTO:
-${input.currentLines.map((l) => `- ${l.area.toUpperCase()} — ${l.description}: ${l.estimatedHours}h`).join("\n")}
+${input.currentLines.map((l) => `- ${l.area.toUpperCase()} — ${l.description}: ${l.estimatedDays}j`).join("\n")}
 
 HISTÓRICO DE PROYECTOS SIMILARES:
 ${historyContext}

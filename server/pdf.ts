@@ -54,9 +54,9 @@ interface PdfBudget {
   lines: Array<{
     area: string;
     description: string;
-    estimatedHours: string | number;
-    salePricePerHour: string | number;
-    costPerHour: string | number;
+    estimatedDays: string | number;
+    salePricePerDay: string | number;
+    costPerDay: string | number;
     lineSale: string | number;
     lineCost: string | number;
     isFixedPrice?: boolean;
@@ -85,7 +85,7 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
     const areaLines = linesByArea[area];
     if (!areaLines || areaLines.length === 0) return "";
     const areaTotal = areaLines.reduce((s, l) => s + parseFloat(String(l.lineSale ?? 0)), 0);
-    const areaHours = areaLines.reduce((s, l) => s + parseFloat(String(l.estimatedHours ?? 0)), 0);
+    const areaHours = areaLines.reduce((s, l) => s + parseFloat(String(l.estimatedDays ?? 0)), 0);
 
     const areaColors: Record<string, string> = {
       seo: "#7c3aed", design: "#db2777", development: "#2563eb", various: "#ea580c"
@@ -102,8 +102,8 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
       ${areaLines.map(l => `
         <tr>
           <td style="padding: 8px 12px; font-size: 12px; color: #323750;">${l.description}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: center;">${parseFloat(String(l.estimatedHours)).toFixed(1)}h</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: right;">${fmtCurrency(l.salePricePerHour)}/h</td>
+          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: center;">${parseFloat(String(l.estimatedDays)).toFixed(1)}h</td>
+          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: right;">${fmtCurrency(l.salePricePerDay)}/h</td>
           <td style="padding: 8px 12px; font-size: 12px; font-weight: 600; color: #080e2c; text-align: right;">${fmtCurrency(l.lineSale)}</td>
         </tr>
       `).join("")}

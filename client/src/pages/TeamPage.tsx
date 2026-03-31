@@ -45,8 +45,8 @@ function WorkerDialog({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [dept, setDept] = useState(initial?.department ?? "development");
-  const [cost, setCost] = useState(String(initial?.costPerHour ?? ""));
-  const [sale, setSale] = useState(String(initial?.salePricePerHour ?? ""));
+  const [cost, setCost] = useState(String(initial?.costPerDay ?? ""));
+  const [sale, setSale] = useState(String(initial?.salePricePerDay ?? ""));
   const [clockifyEmail, setClockifyEmail] = useState(initial?.clockifyUserEmail ?? "");
 
   const multiplier = cost && sale ? (parseFloat(sale) / parseFloat(cost)).toFixed(2) : "—";
@@ -77,7 +77,7 @@ function WorkerDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Coste/hora (€) *</Label>
+              <Label className="text-xs">Coste/jornada (€) *</Label>
               <Input type="number" value={cost} onChange={e => setCost(e.target.value)} min="0" step="0.5" />
             </div>
             <div className="space-y-1.5">
@@ -108,7 +108,7 @@ function WorkerDialog({
                 toast.error("Rellena todos los campos obligatorios");
                 return;
               }
-              onSave({ id: initial?.id, name, department: dept, costPerHour: cost, salePricePerHour: sale, clockifyUserEmail: clockifyEmail || undefined });
+              onSave({ id: initial?.id, name, department: dept, costPerDay: cost, salePricePerDay: sale, clockifyUserEmail: clockifyEmail || undefined });
             }}
             style={{ background: "var(--brand-darkest)", color: "white" }}
           >
@@ -250,16 +250,16 @@ export default function TeamPage() {
                         <div className="flex items-center gap-6 text-sm">
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Coste/h</p>
-                            <p className="font-medium">{fmtCurrency(w.costPerHour)}</p>
+                            <p className="font-medium">{fmtCurrency(w.costPerDay)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Venta/h</p>
-                            <p className="font-semibold">{fmtCurrency(w.salePricePerHour)}</p>
+                            <p className="font-semibold">{fmtCurrency(w.salePricePerDay)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Mult.</p>
                             <p className="font-medium text-muted-foreground">
-                              {(parseFloat(w.salePricePerHour) / parseFloat(w.costPerHour)).toFixed(1)}x
+                              {(parseFloat(w.salePricePerDay) / parseFloat(w.costPerDay)).toFixed(1)}x
                             </p>
                           </div>
                           {isAdmin && (

@@ -101,3 +101,15 @@
 - [x] Test de autenticación (auth.logout)
 - [x] Test de integración Holded API
 - [x] Test de integración Clockify API
+
+## Correcciones v1.1
+- [x] Logo Balinot no visible en el sidebar — subir SVG a CDN y referenciar correctamente
+- [x] Tarifas de trabajadores: los valores son precio/jornada (8h), no precio/hora — refactorizado a modelo de jornadas en toda la app
+
+## Refactorización a jornadas (v1.2)
+- [x] Renombrar costPerHour → costPerDay y salePricePerHour → salePricePerDay en schema, DB y toda la app
+- [x] Actualizar la calculadora: las líneas de trabajo se introducen en jornadas, no en horas
+- [x] Actualizar la UI de Equipo y tarifas: mostrar precio/jornada (no precio/hora)
+- [x] Actualizar la sincronización de Clockify: convertir horas a jornadas (÷8) antes de guardar en histórico
+- [x] Actualizar el histórico de proyectos: mostrar jornadas medias por tipología (no horas)
+- [x] Actualizar el PDF: mostrar jornadas en el desglose de trabajo
