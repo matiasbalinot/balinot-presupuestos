@@ -35,14 +35,15 @@ function fmtEur(n: number) {
 // ─── Clockify tab ─────────────────────────────────────────────────────────────
 function ClockifyTab() {
   const today = new Date().toISOString().split("T")[0];
-  const [dateFrom, setDateFrom] = useState("2020-01-01");
+  const oneYearAgo = new Date(Date.now() - 364 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const [dateFrom, setDateFrom] = useState(oneYearAgo);
   const [dateTo, setDateTo] = useState(today);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = trpc.clockify.getProjectHours.useQuery(
+  const { data, isLoading, error } = trpc.clockify.getProjectHours.useQuery(
     { dateFrom: dateFrom + "T00:00:00Z", dateTo: dateTo + "T23:59:59Z" },
-    { staleTime: 5 * 60 * 1000 }
+    { staleTime: 5 * 60 * 1000, retry: false }
   );
 
   const projects = useMemo(() => {
@@ -77,6 +78,18 @@ function ClockifyTab() {
         </CardContent>
       </Card>
 
+      {(data as any)?.limitedToOneYear && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+          <span className="font-medium">Aviso:</span>
+          El plan de Clockify limita las consultas a un máximo de 364 días. El rango se ha ajustado automáticamente.
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <span className="font-medium">Error:</span>
+          {error.message}
+        </div>
+      )}
       {isLoading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />

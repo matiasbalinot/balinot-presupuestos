@@ -535,11 +535,33 @@ const clockifyRouter = router({
     }))
     .query(async ({ input }) => {
       const config = await getIntegrationConfig("clockify");
-      if (!config?.apiKey || !config?.workspaceId) return { projects: [], workers: [] };
-      const wsId = config.workspaceId;
+      if (!config?.apiKey) return { projects: [], workers: [], limitedToOneYear: false };
+
+      // Resolve workspaceId: from config or fetch from API
+      let wsId = config.workspaceId;
+      if (!wsId) {
+        try {
+          const userRes = await axios.get(`${CLOCKIFY_BASE}/user`, { headers: { "X-Api-Key": config.apiKey } });
+          wsId = userRes.data.activeWorkspace;
+          await upsertIntegrationConfig("clockify", { workspaceId: wsId });
+        } catch {
+          return { projects: [], workers: [], limitedToOneYear: false };
+        }
+      }
+
       const headers = { "X-Api-Key": config.apiKey };
-      const dateFrom = input.dateFrom ?? "2020-01-01T00:00:00Z";
-      const dateTo = input.dateTo ?? new Date().toISOString();
+      const now = new Date();
+      const oneYearAgo = new Date(now.getTime() - 364 * 24 * 60 * 60 * 1000);
+
+      // Enforce max 364-day range (plan limitation)
+      let dateFrom = input.dateFrom ? new Date(input.dateFrom) : oneYearAgo;
+      let dateTo = input.dateTo ? new Date(input.dateTo) : now;
+      const diffDays = (dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24);
+      const limitedToOneYear = diffDays > 364;
+      if (limitedToOneYear) dateFrom = new Date(dateTo.getTime() - 364 * 24 * 60 * 60 * 1000);
+
+      const dateFromStr = dateFrom.toISOString().replace(/\.\d{3}Z$/, ".000Z");
+      const dateToStr = dateTo.toISOString().replace(/\.\d{3}Z$/, ".999Z");
       try {
         const membersRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/users`, { headers });
         const members: any[] = membersRes.data;
@@ -548,9 +570,10 @@ const clockifyRouter = router({
         const reportRes = await axios.post(
           `${CLOCKIFY_REPORTS}/workspaces/${wsId}/reports/summary`,
           {
-            dateRangeStart: dateFrom,
-            dateRangeEnd: dateTo,
+            dateRangeStart: dateFromStr,
+            dateRangeEnd: dateToStr,
             summaryFilter: { groups: ["PROJECT", "USER"] },
+            amountShown: "HIDE_AMOUNT",
           },
           { headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" } }
         );
@@ -601,9 +624,10 @@ const clockifyRouter = router({
           avgDaysPerProject: parseFloat((w.totalHours / 8 / (w.count || 1)).toFixed(2)),
           projectCount: w.count,
         })).sort((a, b) => b.totalHours - a.totalHours);
-        return { projects: projectRows, workers: workerAverages };
-      } catch {
-        return { projects: [], workers: [] };
+        return { projects: projectRows, workers: workerAverages, limitedToOneYear };
+      } catch (err: any) {
+        const msg = err?.response?.data?.message ?? String(err);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Error Clockify: ${msg}` });
       }
     }),
 });
