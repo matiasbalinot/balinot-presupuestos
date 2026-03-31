@@ -191,10 +191,8 @@ export default function Dashboard() {
                   <FileText className="w-4 h-4 text-muted-foreground" />
                   Presupuestos recientes
                 </CardTitle>
-                <Link href="/presupuestos">
-                  <a className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
-                    Ver todos <ArrowRight className="w-3 h-3" />
-                  </a>
+                <Link href="/presupuestos" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                  Ver todos <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             </CardHeader>
@@ -219,8 +217,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-2">
                   {recentBudgets.map((budget: any) => (
-                    <Link key={budget.id} href={`/presupuestos/${budget.id}`}>
-                      <a className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group">
+                    <Link key={budget.id} href={`/presupuestos/${budget.id}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-foreground truncate">{budget.projectName}</p>
@@ -239,7 +236,6 @@ export default function Dashboard() {
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </a>
                     </Link>
                   ))}
                 </div>

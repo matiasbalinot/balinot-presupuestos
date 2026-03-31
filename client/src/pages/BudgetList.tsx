@@ -151,9 +151,7 @@ export default function BudgetList() {
                 {/* Project */}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <Link href={`/presupuestos/${budget.id}`}>
-                      <a className="text-sm font-medium text-foreground hover:underline truncate">{budget.projectName}</a>
-                    </Link>
+                    <Link href={`/presupuestos/${budget.id}`} className="text-sm font-medium text-foreground hover:underline truncate">{budget.projectName}</Link>
                     <StatusBadge status={budget.status} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{budget.budgetNumber}</p>
@@ -180,9 +178,9 @@ export default function BudgetList() {
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-1">
                   <Link href={`/presupuestos/${budget.id}`}>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver / Editar">
+                    <button className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent transition-colors" title="Ver / Editar">
                       <Edit className="w-3.5 h-3.5" />
-                    </Button>
+                    </button>
                   </Link>
                   <Button
                     variant="ghost"
