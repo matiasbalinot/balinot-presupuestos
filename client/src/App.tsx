@@ -10,6 +10,7 @@ import BudgetEditor from "./pages/BudgetEditor";
 import TeamPage from "./pages/TeamPage";
 import HistoryPage from "./pages/HistoryPage";
 import ConfigPage from "./pages/ConfigPage";
+import DataPanel from "./pages/DataPanel";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/equipo" component={TeamPage} />
       <Route path="/historico" component={HistoryPage} />
       <Route path="/configuracion" component={ConfigPage} />
+      <Route path="/datos" component={DataPanel} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

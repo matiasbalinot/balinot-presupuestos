@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Database,
   FileText,
   History,
   LogOut,
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/presupuestos/nuevo", label: "Nuevo presupuesto", icon: Plus, highlight: true },
   { href: "/equipo", label: "Equipo y tarifas", icon: Users },
   { href: "/historico", label: "Histórico", icon: History },
+  { href: "/datos", label: "Panel de datos", icon: Database },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 

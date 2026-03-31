@@ -117,3 +117,11 @@
 ## Correcciones v1.3
 - [x] Resetear medias históricas de jornadas a 0 en el seed (no hay datos reales aún, se actualizarán desde Clockify)
 - [x] Sugerencia automática de Diseño: generar DOS líneas — Rafa (fase referencial, 0.5j fija) + Enrique (diseño web, jornadas del histórico)
+
+## Panel de datos v1.4
+- [x] Nueva página /datos con dos pestañas: Clockify y Holded
+- [x] Pestaña Clockify: tabla de horas por proyecto y trabajador, con filtro por tipología; tabla de medias de jornadas por trabajador
+- [x] Pestaña Holded: gastos desglosados por concepto (nóminas gestión, gastos fijos, otros) con suma total
+- [x] Backend: endpoint clockify.getProjectHours para obtener entradas de tiempo agrupadas por proyecto y trabajador
+- [x] Backend: endpoint holded.getExpenses para obtener gastos del mes actual desde Holded
+- [x] Añadir enlace "Datos" en el sidebar de navegación

@@ -306,8 +306,6 @@ const holdedRouter = router({
   syncFixedCosts: adminProcedure.mutation(async () => {
     const config = await getIntegrationConfig("holded");
     if (!config?.apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Holded no está configurado." });
-
-    // Get expenses from Holded to estimate fixed costs
     try {
       const expenses = await holdedGet(config.apiKey, "/documents/purchase?limit=50");
       return { success: true, message: "Sincronización completada.", count: Array.isArray(expenses) ? expenses.length : 0 };
@@ -315,6 +313,59 @@ const holdedRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al sincronizar gastos desde Holded." });
     }
   }),
+
+  // Panel de datos: gastos por concepto con suma total
+  getExpenses: protectedProcedure
+    .input(z.object({
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const config = await getIntegrationConfig("holded");
+      if (!config?.apiKey) return { expenses: [], total: 0, byCategory: [] };
+      try {
+        const data = await holdedGet(config.apiKey, "/documents/purchase?limit=100");
+        const docs: any[] = Array.isArray(data) ? data : (data?.data ?? []);
+        const from = input.dateFrom ? new Date(input.dateFrom).getTime() / 1000 : 0;
+        const to = input.dateTo ? new Date(input.dateTo).getTime() / 1000 : Infinity;
+        const filtered = docs.filter((d: any) => {
+          const ts = d.date ?? d.createdAt ?? 0;
+          return ts >= from && ts <= to;
+        });
+        const expenses = filtered.map((d: any) => ({
+          id: d.id ?? d._id ?? "",
+          date: d.date ? new Date(d.date * 1000).toISOString().split("T")[0] : null,
+          concept: d.desc ?? d.name ?? d.notes ?? "Sin concepto",
+          contactName: d.contactName ?? d.contact?.name ?? "",
+          total: parseFloat(d.total ?? d.amount ?? 0),
+          subtotal: parseFloat(d.subtotal ?? d.total ?? 0),
+          docNumber: d.docNumber ?? d.num ?? "",
+          status: d.status ?? "",
+        }));
+        // Group by category using keyword detection
+        const MGMT_NAMES = ["fran", "matías", "matias", "antonio", "hidaya"];
+        const categoryMap: Record<string, number> = {};
+        for (const e of expenses) {
+          const conceptLower = (e.concept + " " + e.contactName).toLowerCase();
+          let cat = "Otros gastos";
+          if (MGMT_NAMES.some(n => conceptLower.includes(n))) cat = "Nóminas gestión";
+          else if (conceptLower.includes("nómina") || conceptLower.includes("nomina") || conceptLower.includes("salario")) cat = "Nóminas equipo";
+          else if (conceptLower.includes("alquiler") || conceptLower.includes("oficina")) cat = "Alquiler / Oficina";
+          else if (conceptLower.includes("software") || conceptLower.includes("licencia") || conceptLower.includes("suscripción") || conceptLower.includes("suscripcion")) cat = "Software y licencias";
+          else if (conceptLower.includes("seguro")) cat = "Seguros";
+          else if (conceptLower.includes("asesoría") || conceptLower.includes("asesoria") || conceptLower.includes("gestoría") || conceptLower.includes("gestoria")) cat = "Asesoría";
+          else if (conceptLower.includes("marketing") || conceptLower.includes("publicidad")) cat = "Marketing";
+          categoryMap[cat] = (categoryMap[cat] ?? 0) + e.total;
+        }
+        const byCategory = Object.entries(categoryMap)
+          .map(([name, total]) => ({ name, total: parseFloat(total.toFixed(2)) }))
+          .sort((a, b) => b.total - a.total);
+        const total = expenses.reduce((s, e) => s + e.total, 0);
+        return { expenses, total: parseFloat(total.toFixed(2)), byCategory };
+      } catch {
+        return { expenses: [], total: 0, byCategory: [] };
+      }
+    }),
 
   getConfig: protectedProcedure.query(() => getIntegrationConfig("holded")),
   saveConfig: adminProcedure
@@ -475,6 +526,86 @@ const clockifyRouter = router({
   saveConfig: adminProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(({ input }) => upsertIntegrationConfig("clockify", { apiKey: input.apiKey })),
+
+  // Panel de datos: horas por proyecto y trabajador, medias por trabajador
+  getProjectHours: protectedProcedure
+    .input(z.object({
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const config = await getIntegrationConfig("clockify");
+      if (!config?.apiKey || !config?.workspaceId) return { projects: [], workers: [] };
+      const wsId = config.workspaceId;
+      const headers = { "X-Api-Key": config.apiKey };
+      const dateFrom = input.dateFrom ?? "2020-01-01T00:00:00Z";
+      const dateTo = input.dateTo ?? new Date().toISOString();
+      try {
+        const membersRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/users`, { headers });
+        const members: any[] = membersRes.data;
+        const projectsRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/projects?page-size=200`, { headers });
+        const allProjects: any[] = projectsRes.data;
+        const reportRes = await axios.post(
+          `${CLOCKIFY_REPORTS}/workspaces/${wsId}/reports/summary`,
+          {
+            dateRangeStart: dateFrom,
+            dateRangeEnd: dateTo,
+            summaryFilter: { groups: ["PROJECT", "USER"] },
+          },
+          { headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" } }
+        );
+        const groupOne: any[] = reportRes.data?.groupOne ?? [];
+        const projectRows = groupOne.map((proj: any) => {
+          const meta = allProjects.find((p: any) => p.id === proj.id);
+          const workers: { name: string; dept: string; hours: number; days: number }[] = [];
+          let seoH = 0, designH = 0, devH = 0, variousH = 0;
+          for (const userGroup of (proj.children ?? [])) {
+            const member = members.find((m: any) => m.id === userGroup.id);
+            const name = member?.name ?? userGroup.name ?? "Desconocido";
+            const dept = getDeptFromName(name);
+            const hours = parseFloat(((userGroup.duration ?? 0) / 3600).toFixed(2));
+            const days = parseFloat((hours / 8).toFixed(2));
+            workers.push({ name, dept, hours, days });
+            if (dept === "seo") seoH += hours;
+            else if (dept === "design") designH += hours;
+            else if (dept === "development") devH += hours;
+            else variousH += hours;
+          }
+          const totalH = parseFloat(((proj.duration ?? 0) / 3600).toFixed(2));
+          return {
+            projectId: proj.id,
+            projectName: meta?.name ?? proj.name ?? proj.id,
+            totalHours: totalH,
+            totalDays: parseFloat((totalH / 8).toFixed(2)),
+            seoHours: parseFloat(seoH.toFixed(2)), seoDays: parseFloat((seoH / 8).toFixed(2)),
+            designHours: parseFloat(designH.toFixed(2)), designDays: parseFloat((designH / 8).toFixed(2)),
+            devHours: parseFloat(devH.toFixed(2)), devDays: parseFloat((devH / 8).toFixed(2)),
+            variousHours: parseFloat(variousH.toFixed(2)), variousDays: parseFloat((variousH / 8).toFixed(2)),
+            workers,
+          };
+        }).sort((a: any, b: any) => b.totalHours - a.totalHours);
+        // Build worker averages
+        const workerMap: Record<string, { name: string; dept: string; totalHours: number; count: number }> = {};
+        for (const proj of projectRows) {
+          for (const w of proj.workers) {
+            if (!workerMap[w.name]) workerMap[w.name] = { name: w.name, dept: w.dept, totalHours: 0, count: 0 };
+            workerMap[w.name].totalHours += w.hours;
+            workerMap[w.name].count += 1;
+          }
+        }
+        const workerAverages = Object.values(workerMap).map(w => ({
+          name: w.name, dept: w.dept,
+          totalHours: parseFloat(w.totalHours.toFixed(2)),
+          totalDays: parseFloat((w.totalHours / 8).toFixed(2)),
+          avgHoursPerProject: parseFloat((w.totalHours / (w.count || 1)).toFixed(2)),
+          avgDaysPerProject: parseFloat((w.totalHours / 8 / (w.count || 1)).toFixed(2)),
+          projectCount: w.count,
+        })).sort((a, b) => b.totalHours - a.totalHours);
+        return { projects: projectRows, workers: workerAverages };
+      } catch {
+        return { projects: [], workers: [] };
+      }
+    }),
 });
 
 // ─── Project history router ───────────────────────────────────────────────────
