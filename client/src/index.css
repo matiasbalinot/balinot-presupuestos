@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,39 +44,52 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  /* Balinot brand: #080e2c #323750 #707385 #9a9ca8 #e6e7ea #edeff5 */
+  --brand-darkest:  oklch(13.5% 0.042 258);
+  --brand-dark:     oklch(24.5% 0.052 258);
+  --brand-mid:      oklch(50% 0.022 258);
+  --brand-light:    oklch(65% 0.012 258);
+  --brand-pale:     oklch(92% 0.005 258);
+  --brand-lightest: oklch(95% 0.003 258);
+
+  --primary: var(--brand-darkest);
+  --primary-foreground: oklch(100% 0 0);
+  --sidebar-primary: oklch(100% 0 0);
+  --sidebar-primary-foreground: var(--brand-darkest);
+  --chart-1: oklch(55% 0.18 258);
+  --chart-2: oklch(45% 0.14 258);
+  --chart-3: oklch(35% 0.10 258);
+  --chart-4: oklch(65% 0.08 145);
+  --chart-5: oklch(60% 0.18 60);
+  --radius: 0.5rem;
+  --background: var(--brand-lightest);
+  --foreground: var(--brand-darkest);
+  --card: oklch(100% 0 0);
+  --card-foreground: var(--brand-darkest);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: var(--brand-darkest);
+  --secondary: var(--brand-pale);
+  --secondary-foreground: var(--brand-dark);
+  --muted: var(--brand-pale);
+  --muted-foreground: var(--brand-mid);
+  --accent: var(--brand-dark);
+  --accent-foreground: oklch(100% 0 0);
+  --destructive: oklch(55% 0.22 27);
+  --destructive-foreground: oklch(100% 0 0);
+  --border: var(--brand-pale);
+  --input: var(--brand-pale);
+  --ring: var(--brand-dark);
+  --sidebar: var(--brand-darkest);
+  --sidebar-foreground: oklch(92% 0.005 258);
+  --sidebar-accent: var(--brand-dark);
+  --sidebar-accent-foreground: oklch(100% 0 0);
+  --sidebar-border: oklch(20% 0.04 258);
+  --sidebar-ring: var(--brand-pale);
+
+  /* Status colors */
+  --color-success: oklch(55% 0.18 145);
+  --color-warning: oklch(72% 0.18 60);
+  --color-danger:  oklch(55% 0.22 27);
 }
 
 .dark {
@@ -116,9 +130,15 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', 'Suisse Intl', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
