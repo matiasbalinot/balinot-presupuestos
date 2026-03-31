@@ -166,14 +166,32 @@ export default function BudgetEditor() {
       }));
     }
 
-    // Design workers
+    // Design workers — always generate TWO lines:
+    // 1. Rafa: fase referencial (fixed 0.5j)
+    // 2. Enrique: diseño web (jornadas del histórico)
     const designWorkers = workers.filter((w: any) => w.department === "design");
-    if (parseFloat(type.avgDesignDays) > 0 && designWorkers.length > 0) {
-      const w = designWorkers[0];
+    const rafa = designWorkers.find((w: any) => w.name.toLowerCase().includes("rafa"));
+    const enrique = designWorkers.find((w: any) => w.name.toLowerCase().includes("enrique"));
+    const fallbackDesigner = designWorkers[0];
+    // Line 1: Rafa — fase referencial (always 0.5j)
+    if (rafa || fallbackDesigner) {
+      const w = rafa ?? fallbackDesigner;
       newLines.push(calcLine({
         tempId: uid(), workerId: w.id, area: "design",
-        description: `Diseño — ${w.name}`,
-        estimatedDays: fmt(parseFloat(type.avgDesignDays) / designWorkers.length),
+        description: `Fase referencial — ${w.name}`,
+        estimatedDays: "0.5",
+        costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
+        lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
+      }));
+    }
+    // Line 2: Enrique — diseño web (jornadas del histórico, or 0 if no data yet)
+    if (enrique || fallbackDesigner) {
+      const w = enrique ?? fallbackDesigner;
+      const avgDays = parseFloat(type.avgDesignDays) || 0;
+      newLines.push(calcLine({
+        tempId: uid(), workerId: w.id, area: "design",
+        description: `Diseño web — ${w.name}`,
+        estimatedDays: fmt(avgDays),
         costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
         lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
       }));

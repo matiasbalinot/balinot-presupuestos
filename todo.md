@@ -113,3 +113,7 @@
 - [x] Actualizar la sincronización de Clockify: convertir horas a jornadas (÷8) antes de guardar en histórico
 - [x] Actualizar el histórico de proyectos: mostrar jornadas medias por tipología (no horas)
 - [x] Actualizar el PDF: mostrar jornadas en el desglose de trabajo
+
+## Correcciones v1.3
+- [x] Resetear medias históricas de jornadas a 0 en el seed (no hay datos reales aún, se actualizarán desde Clockify)
+- [x] Sugerencia automática de Diseño: generar DOS líneas — Rafa (fase referencial, 0.5j fija) + Enrique (diseño web, jornadas del histórico)
