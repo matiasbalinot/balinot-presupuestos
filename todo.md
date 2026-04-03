@@ -149,3 +149,10 @@
 
 ## Correcciones v2.4
 - [x] Eliminar "branding" de las tipologías de proyecto (project_types) en BD y frontend
+
+## Mejoras v2.5
+- [x] Formulario de cliente en BudgetEditor: añadir campos NIF, Tipo (Empresa/Persona), Dirección, Población, CP, Provincia, País, Móvil, Website (Tipo de contacto fijo: Cliente)
+- [x] Ampliar schema de BD y router con los nuevos campos de cliente
+- [x] Mapear correctamente todos los campos al API de Holded al crear el contacto
+- [x] Buscador de cliente en Holded con autocompletado: escribir nombre → buscar en Holded → seleccionar si existe (autocompleta campos) o crear nuevo
+- [x] Al guardar presupuesto: si el cliente no existe en Holded, crearlo automáticamente con todos los campos

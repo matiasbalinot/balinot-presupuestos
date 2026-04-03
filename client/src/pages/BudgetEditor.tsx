@@ -2,14 +2,17 @@ import AppLayout from "@/components/AppLayout";
 import { MarginBadge, MarginIndicator } from "@/components/MarginBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import {
   AlertTriangle,
   Brain,
+  Building2,
   ChevronDown,
   ChevronUp,
   Download,
@@ -17,12 +20,14 @@ import {
   Loader2,
   Plus,
   Save,
+  Search,
   Send,
   Sparkles,
   Trash2,
+  User,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -108,10 +113,55 @@ export default function BudgetEditor() {
     { enabled: !!budgetId }
   );
 
+  // Holded contact search
+  const [holdedSearchQuery, setHoldedSearchQuery] = useState("");
+  const [holdedSearchOpen, setHoldedSearchOpen] = useState(false);
+  const [holdedDebouncedQuery, setHoldedDebouncedQuery] = useState("");
+  const holdedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data: holdedContacts = [], isFetching: isSearchingHolded } = trpc.holded.searchContacts.useQuery(
+    { query: holdedDebouncedQuery },
+    { enabled: holdedDebouncedQuery.length >= 2 }
+  );
+  const createContactMutation = trpc.holded.createContact.useMutation();
+
+  const handleHoldedSearchChange = (val: string) => {
+    setHoldedSearchQuery(val);
+    if (holdedDebounceRef.current) clearTimeout(holdedDebounceRef.current);
+    holdedDebounceRef.current = setTimeout(() => setHoldedDebouncedQuery(val), 400);
+  };
+
+  const applyHoldedContact = (c: any) => {
+    setClientName(c.name ?? "");
+    setClientEmail(c.email ?? "");
+    setClientNif(c.vatnumber ?? "");
+    setClientType(c.type === "person" ? "person" : "company");
+    setClientAddress(c.address ?? "");
+    setClientCity(c.city ?? "");
+    setClientPostalCode(c.postalCode ?? "");
+    setClientProvince(c.province ?? "");
+    setClientCountry(c.country ?? "España");
+    setClientPhone(c.mobile ?? "");
+    setClientWebsite(c.website ?? "");
+    setHoldedContactId(c.id ?? "");
+    setHoldedSearchOpen(false);
+    setHoldedSearchQuery("");
+    setHoldedDebouncedQuery("");
+    toast.success(`Cliente "${c.name}" cargado desde Holded`);
+  };
+
   // Form state
   const [projectName, setProjectName] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+  const [clientNif, setClientNif] = useState("");
+  const [clientType, setClientType] = useState<"company" | "person">("company");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientCity, setClientCity] = useState("");
+  const [clientPostalCode, setClientPostalCode] = useState("");
+  const [clientProvince, setClientProvince] = useState("");
+  const [clientCountry, setClientCountry] = useState("España");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientWebsite, setClientWebsite] = useState("");
   const [projectTypeId, setProjectTypeId] = useState<number | null>(null);
   const [managementPct, setManagementPct] = useState("40");
   const [commissionType, setCommissionType] = useState<"none" | "luis" | "commercial">("none");
@@ -131,6 +181,16 @@ export default function BudgetEditor() {
       setProjectName(existingBudget.projectName);
       setClientName(existingBudget.clientName);
       setClientEmail(existingBudget.clientEmail ?? "");
+      setClientNif((existingBudget as any).clientNif ?? "");
+      setClientType((existingBudget as any).clientType ?? "company");
+      setClientAddress((existingBudget as any).clientAddress ?? "");
+      setClientCity((existingBudget as any).clientCity ?? "");
+      setClientPostalCode((existingBudget as any).clientPostalCode ?? "");
+      setClientProvince((existingBudget as any).clientProvince ?? "");
+      setClientCountry((existingBudget as any).clientCountry ?? "España");
+      setClientPhone((existingBudget as any).clientPhone ?? "");
+      setClientWebsite((existingBudget as any).clientWebsite ?? "");
+      setHoldedContactId((existingBudget as any).holdedContactId ?? "");
       setProjectTypeId(existingBudget.projectTypeId ?? null);
       setManagementPct(existingBudget.managementPct ?? "40");
       setCommissionType((existingBudget as any).commissionType ?? "none");
@@ -334,9 +394,45 @@ export default function BudgetEditor() {
     }
     setIsSaving(true);
     try {
+      // Si no hay contacto Holded vinculado, intentar crearlo
+      let resolvedHoldedContactId = holdedContactId;
+      if (!resolvedHoldedContactId && clientName.trim()) {
+        try {
+          const created = await createContactMutation.mutateAsync({
+            name: clientName.trim(),
+            email: clientEmail || undefined,
+            vatnumber: clientNif || undefined,
+            type: clientType,
+            address: clientAddress || undefined,
+            city: clientCity || undefined,
+            postalCode: clientPostalCode || undefined,
+            province: clientProvince || undefined,
+            country: clientCountry || undefined,
+            mobile: clientPhone || undefined,
+            website: clientWebsite || undefined,
+          });
+          if (created.id) {
+            resolvedHoldedContactId = created.id;
+            setHoldedContactId(created.id);
+            toast.success(`Cliente creado en Holded`);
+          }
+        } catch {
+          // No bloquear el guardado si Holded falla
+        }
+      }
+
       const result = await saveMutation.mutateAsync({
         id: budgetId ?? undefined,
         projectName, clientName, clientEmail,
+        clientNif: clientNif || undefined,
+        clientType,
+        clientAddress: clientAddress || undefined,
+        clientCity: clientCity || undefined,
+        clientPostalCode: clientPostalCode || undefined,
+        clientProvince: clientProvince || undefined,
+        clientCountry: clientCountry || undefined,
+        clientPhone: clientPhone || undefined,
+        clientWebsite: clientWebsite || undefined,
         projectTypeId,
         managementPct,
         commissionType,
@@ -351,7 +447,7 @@ export default function BudgetEditor() {
         netMargin: fmt(totals.netMargin),
         netMarginPct: fmt(totals.netMarginPct),
         notes, internalNotes,
-        holdedContactId: holdedContactId || undefined,
+        holdedContactId: resolvedHoldedContactId || undefined,
         lines: lines.map((l, i) => ({
           id: l.id,
           workerId: l.workerId,
@@ -507,22 +603,121 @@ export default function BudgetEditor() {
                     </p>
                   )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Cliente *</Label>
-                  <Input
-                    value={clientName}
-                    onChange={e => setClientName(e.target.value)}
-                    placeholder="Nombre del cliente"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Email del cliente</Label>
-                  <Input
-                    type="email"
-                    value={clientEmail}
-                    onChange={e => setClientEmail(e.target.value)}
-                    placeholder="cliente@empresa.com"
-                  />
+                {/* Client block — full width */}
+                <div className="sm:col-span-2 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Datos del cliente</Label>
+                    <Popover open={holdedSearchOpen} onOpenChange={setHoldedSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                          <Search className="w-3 h-3" />
+                          Buscar en Holded
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-0" align="end">
+                        <Command>
+                          <CommandInput
+                            placeholder="Buscar cliente..."
+                            value={holdedSearchQuery}
+                            onValueChange={handleHoldedSearchChange}
+                          />
+                          <CommandList>
+                            {isSearchingHolded && (
+                              <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Buscando...
+                              </div>
+                            )}
+                            {!isSearchingHolded && holdedDebouncedQuery.length >= 2 && holdedContacts.length === 0 && (
+                              <CommandEmpty>No se encontraron contactos</CommandEmpty>
+                            )}
+                            {holdedContacts.length > 0 && (
+                              <CommandGroup heading="Contactos en Holded">
+                                {holdedContacts.map((c: any) => (
+                                  <CommandItem
+                                    key={c.id}
+                                    value={c.name}
+                                    onSelect={() => applyHoldedContact(c)}
+                                    className="gap-2"
+                                  >
+                                    {c.type === "person" ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                                    <div>
+                                      <p className="text-xs font-medium">{c.name}</p>
+                                      {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {holdedContactId && (
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded">
+                      <Building2 className="w-3 h-3" />
+                      Vinculado a Holded
+                      <button className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => setHoldedContactId("")}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nombre *</Label>
+                      <Input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">NIF / CIF</Label>
+                      <Input value={clientNif} onChange={e => setClientNif(e.target.value)} placeholder="B12345678" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Tipo</Label>
+                      <Select value={clientType} onValueChange={v => setClientType(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="company"><span className="flex items-center gap-1.5"><Building2 className="w-3 h-3" />Empresa</span></SelectItem>
+                          <SelectItem value="person"><span className="flex items-center gap-1.5"><User className="w-3 h-3" />Persona</span></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Email</Label>
+                      <Input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="cliente@empresa.com" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Dirección</Label>
+                      <Input value={clientAddress} onChange={e => setClientAddress(e.target.value)} placeholder="Calle, número, piso..." />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Población</Label>
+                      <Input value={clientCity} onChange={e => setClientCity(e.target.value)} placeholder="Valencia" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Código postal</Label>
+                      <Input value={clientPostalCode} onChange={e => setClientPostalCode(e.target.value)} placeholder="46001" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Provincia</Label>
+                      <Input value={clientProvince} onChange={e => setClientProvince(e.target.value)} placeholder="Valencia" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">País</Label>
+                      <Input value={clientCountry} onChange={e => setClientCountry(e.target.value)} placeholder="España" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Móvil</Label>
+                      <Input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="+34 600 000 000" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Website</Label>
+                      <Input value={clientWebsite} onChange={e => setClientWebsite(e.target.value)} placeholder="https://empresa.com" />
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">% Gestión (sobre subtotal)</Label>

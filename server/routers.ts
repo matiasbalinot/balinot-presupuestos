@@ -143,6 +143,15 @@ const budgetsRouter = router({
         projectName: z.string().min(1),
         clientName: z.string().min(1),
         clientEmail: z.string().optional(),
+        clientNif: z.string().optional(),
+        clientType: z.enum(["company", "person"]).optional(),
+        clientAddress: z.string().optional(),
+        clientCity: z.string().optional(),
+        clientPostalCode: z.string().optional(),
+        clientProvince: z.string().optional(),
+        clientCountry: z.string().optional(),
+        clientPhone: z.string().optional(),
+        clientWebsite: z.string().optional(),
         projectTypeId: z.number().nullable().optional(),
         managementPct: z.string().optional(),
         commissionType: z.enum(["none", "luis", "commercial"]).optional(),
@@ -250,9 +259,63 @@ const holdedRouter = router({
       if (!config?.apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Holded no está configurado." });
       try {
         const contacts = await holdedGet(config.apiKey, `/contacts?name=${encodeURIComponent(input.query)}`);
-        return Array.isArray(contacts) ? contacts.slice(0, 10) : [];
+        if (!Array.isArray(contacts)) return [];
+        return contacts.slice(0, 10).map((c: any) => ({
+          id: c.id ?? "",
+          name: c.name ?? "",
+          email: c.email ?? "",
+          vatnumber: c.vatnumber ?? "",
+          type: c.type ?? "company",
+          address: c.address ?? "",
+          city: c.city ?? "",
+          postalCode: c.postalCode ?? "",
+          province: c.province ?? "",
+          country: c.country ?? "España",
+          mobile: c.mobile ?? "",
+          website: c.website ?? "",
+        }));
       } catch {
         return [];
+      }
+    }),
+
+  createContact: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      email: z.string().optional(),
+      vatnumber: z.string().optional(),
+      type: z.enum(["company", "person"]).optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      postalCode: z.string().optional(),
+      province: z.string().optional(),
+      country: z.string().optional(),
+      mobile: z.string().optional(),
+      website: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const config = await getIntegrationConfig("holded");
+      if (!config?.apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Holded no está configurado." });
+      try {
+        const body: any = {
+          name: input.name,
+          type: input.type ?? "company",
+          isPerson: input.type === "person",
+          clientRecord: true,
+        };
+        if (input.email) body.email = input.email;
+        if (input.vatnumber) body.vatnumber = input.vatnumber;
+        if (input.address) body.address = input.address;
+        if (input.city) body.city = input.city;
+        if (input.postalCode) body.postalCode = input.postalCode;
+        if (input.province) body.province = input.province;
+        if (input.country) body.country = input.country;
+        if (input.mobile) body.mobile = input.mobile;
+        if (input.website) body.website = input.website;
+        const result = await holdedPost(config.apiKey, "/contacts", body);
+        return { success: true, id: result.id ?? result.contactId ?? "", name: input.name };
+      } catch (err: any) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err?.response?.data?.message ?? "Error al crear el contacto en Holded." });
       }
     }),
 
