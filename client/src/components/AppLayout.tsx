@@ -1,14 +1,10 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Database,
   FileText,
   History,
-  LogOut,
   Plus,
   Settings,
   Users,
@@ -17,7 +13,6 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const LOGO_WHITE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-tertiary-alt_ba62202d.svg";
-const LOGO_DARK = "https://d2xsxph8kpxj0f.cloudfront.net/310519663261892722/SzjLakLUrUiNCPMNsaXjoj/logo-primary-dark_14393126.svg";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: BarChart3 },
@@ -30,41 +25,8 @@ const navItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, isAuthenticated, logout } = useAuth({ redirectOnUnauthenticated: true });
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--brand-lightest)" }}>
-        <div className="flex flex-col items-center gap-4">
-          <img src={LOGO_DARK} alt="Balinot" className="h-8 opacity-60 animate-pulse" />
-          <p className="text-sm text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--brand-lightest)" }}>
-        <div className="flex flex-col items-center gap-6 p-8 bg-card rounded-xl shadow-lg border border-border max-w-sm w-full mx-4">
-          <img src={LOGO_DARK} alt="Balinot" className="h-10" />
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-foreground">Calculadora de presupuestos</h1>
-            <p className="text-sm text-muted-foreground mt-1">Accede con tu cuenta de Balinot</p>
-          </div>
-          <a
-            href={getLoginUrl()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors"
-            style={{ background: "var(--brand-darkest)" }}
-          >
-            Iniciar sesión
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen">
@@ -128,26 +90,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-
-        {/* User footer */}
-        <div className="px-2 pb-4 border-t pt-4" style={{ borderColor: "oklch(20% 0.04 258)" }}>
-          {!collapsed && user && (
-            <div className="px-3 py-2 mb-2">
-              <p className="text-xs font-medium text-white/80 truncate">{user.name ?? user.email ?? "Usuario"}</p>
-              {user.role === "admin" && (
-                <span className="text-xs text-white/40">Superadmin</span>
-              )}
-            </div>
-          )}
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-white/40 hover:text-white/80 hover:bg-white/8 transition-colors"
-            title={collapsed ? "Cerrar sesión" : undefined}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!collapsed && <span>Cerrar sesión</span>}
-          </button>
-        </div>
       </aside>
 
       {/* Main content */}

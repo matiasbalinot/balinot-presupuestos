@@ -244,3 +244,6 @@
 - [x] PDF cliente: debe mostrar datos del servicio (nombre, descripción, precio), no el desglose de jornadas por trabajador — corregido: si hay holdedServiceName, se muestra una sola línea de servicio sin desglose interno
 - [x] Medias de "Varios" no se aplican al seleccionar tipología — corregido: añadido bloque variousWorkers en handleProjectTypeChange
 - [x] Coste personal incorrecto: ahora es solo subtotalCost (coste directo de trabajadores), sin incluir la gestión
+
+## Mejoras v4.6
+- [x] Eliminar autenticación: la app es accesible sin login — quitado guard en AppLayout, todos los procedimientos tRPC son públicos, eliminado check de sesión en PDF

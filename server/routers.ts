@@ -48,8 +48,8 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // ─── Workers router ───────────────────────────────────────────────────────────
 const workersRouter = router({
-  list: protectedProcedure.query(() => getAllWorkers()),
-  listActive: protectedProcedure.query(() => getActiveWorkers()),
+  list: publicProcedure.query(() => getAllWorkers()),
+  listActive: publicProcedure.query(() => getActiveWorkers()),
   upsert: adminProcedure
     .input(
       z.object({
@@ -70,7 +70,7 @@ const workersRouter = router({
 
 // ─── Project types router ─────────────────────────────────────────────────────
 const projectTypesRouter = router({
-  list: protectedProcedure.query(() => getAllProjectTypes()),
+  list: publicProcedure.query(() => getAllProjectTypes()),
   upsert: adminProcedure
     .input(
       z.object({
@@ -88,7 +88,7 @@ const projectTypesRouter = router({
 
 // ─── Fixed costs router ───────────────────────────────────────────────────────
 const fixedCostsRouter = router({
-  list: protectedProcedure.query(() => getAllFixedCosts()),
+  list: publicProcedure.query(() => getAllFixedCosts()),
   upsert: adminProcedure
     .input(
       z.object({
@@ -106,7 +106,7 @@ const fixedCostsRouter = router({
 
 // ─── Commissions router ───────────────────────────────────────────────────────
 const commissionsRouter = router({
-  list: protectedProcedure.query(() => getAllCommissions()),
+  list: publicProcedure.query(() => getAllCommissions()),
   upsert: adminProcedure
     .input(
       z.object({
@@ -137,14 +137,14 @@ const BudgetLineInput = z.object({
 });
 
 const budgetsRouter = router({
-  list: protectedProcedure.query(() => getAllBudgets()),
-  get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => getBudgetWithLines(input.id)),
-  dashboard: protectedProcedure
+  list: publicProcedure.query(() => getAllBudgets()),
+  get: publicProcedure.input(z.object({ id: z.number() })).query(({ input }) => getBudgetWithLines(input.id)),
+  dashboard: publicProcedure
     .input(z.object({ from: z.date().optional(), to: z.date().optional() }).optional())
     .query(({ input }) => getDashboardStats(input?.from, input?.to)),
-  nextNumber: protectedProcedure.query(() => getNextBudgetNumber()),
+  nextNumber: publicProcedure.query(() => getNextBudgetNumber()),
 
-  save: protectedProcedure
+  save: publicProcedure
     .input(
       z.object({
         id: z.number().optional(),
@@ -206,7 +206,7 @@ const budgetsRouter = router({
         return { id };
       } else {
         const budgetNumber = await getNextBudgetNumber();
-        const newId = await createBudget({ ...budgetData, budgetNumber, createdBy: ctx.user.id } as any);
+        const newId = await createBudget({ ...budgetData, budgetNumber, createdBy: ctx.user?.id ?? null } as any);
         if (lines.length > 0) {
           await insertBudgetLines(lines.map((l, i) => ({ ...l, budgetId: newId, sortOrder: i } as any)));
         }
@@ -214,7 +214,7 @@ const budgetsRouter = router({
       }
     }),
 
-  updateStatus: protectedProcedure
+  updateStatus: publicProcedure
     .input(z.object({ id: z.number(), status: z.enum(["draft", "sent", "accepted", "rejected"]) }))
     .mutation(async ({ input }) => {
       const data: any = { status: input.status };
@@ -223,21 +223,21 @@ const budgetsRouter = router({
       return { success: true };
     }),
 
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await deleteBudget(input.id);
       return { success: true };
     }),
 
-  duplicate: protectedProcedure
+  duplicate: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const original = await getBudgetWithLines(input.id);
       if (!original) throw new TRPCError({ code: "NOT_FOUND" });
       const budgetNumber = await getNextBudgetNumber();
       const { id: _id, budgetNumber: _bn, createdAt: _ca, updatedAt: _ua, sentAt: _sa, holdedDocumentId: _hd, lines, ...rest } = original as any;
-      const newId = await createBudget({ ...rest, budgetNumber, status: "draft", createdBy: ctx.user.id });
+      const newId = await createBudget({ ...rest, budgetNumber, status: "draft", createdBy: ctx.user?.id ?? null });
       if (lines?.length > 0) {
         await insertBudgetLines(lines.map(({ id: _lid, createdAt: _lca, ...l }: any) => ({ ...l, budgetId: newId })));
       }
@@ -261,7 +261,7 @@ async function holdedPost(apiKey: string, path: string, body: unknown) {
 }
 
 const holdedRouter = router({
-  testConnection: protectedProcedure
+  testConnection: publicProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -273,7 +273,7 @@ const holdedRouter = router({
       }
     }),
 
-  searchContacts: protectedProcedure
+  searchContacts: publicProcedure
     .input(z.object({ query: z.string() }))
     .query(async ({ input }) => {
       const config = await getIntegrationConfig("holded");
@@ -319,7 +319,7 @@ const holdedRouter = router({
       }
     }),
 
-  createContact: protectedProcedure
+  createContact: publicProcedure
     .input(z.object({
       name: z.string(),
       email: z.string().optional(),
@@ -366,7 +366,7 @@ const holdedRouter = router({
       }
     }),
 
-  listServices: protectedProcedure.query(async () => {
+  listServices: publicProcedure.query(async () => {
     const config = await getIntegrationConfig("holded");
     if (!config?.apiKey) return [];
     try {
@@ -386,7 +386,7 @@ const holdedRouter = router({
     }
   }),
 
-  sendEstimate: protectedProcedure
+  sendEstimate: publicProcedure
     .input(
       z.object({
         budgetId: z.number(),
@@ -459,7 +459,7 @@ const holdedRouter = router({
   }),
 
   // Panel de datos: gastos por concepto con suma total
-  getExpenses: protectedProcedure
+  getExpenses: publicProcedure
     .input(z.object({
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
@@ -511,7 +511,7 @@ const holdedRouter = router({
       }
     }),
 
-  getConfig: protectedProcedure.query(() => getIntegrationConfig("holded")),
+  getConfig: publicProcedure.query(() => getIntegrationConfig("holded")),
   saveConfig: adminProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(({ input }) => upsertIntegrationConfig("holded", { apiKey: input.apiKey })),
@@ -585,7 +585,7 @@ async function ensureProjectTypes(): Promise<Record<string, number>> {
 }
 
 const clockifyRouter = router({
-  testConnection: protectedProcedure
+  testConnection: publicProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -603,7 +603,7 @@ const clockifyRouter = router({
       }
     }),
 
-  getWorkspaceMembers: protectedProcedure.query(async () => {
+  getWorkspaceMembers: publicProcedure.query(async () => {
     const config = await getIntegrationConfig("clockify");
     if (!config?.apiKey || !config?.workspaceId) return [];
     try {
@@ -751,13 +751,13 @@ const clockifyRouter = router({
       };
     }),
 
-  getConfig: protectedProcedure.query(() => getIntegrationConfig("clockify")),
+  getConfig: publicProcedure.query(() => getIntegrationConfig("clockify")),
   saveConfig: adminProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(({ input }) => upsertIntegrationConfig("clockify", { apiKey: input.apiKey })),
 
   // Edición manual de jornadas por trabajador en un proyecto histórico
-  getProjectWorkers: protectedProcedure
+  getProjectWorkers: publicProcedure
     .input(z.object({ projectHistoryId: z.number() }))
     .query(({ input }) => getProjectHistoryWorkers(input.projectHistoryId)),
 
@@ -794,7 +794,7 @@ const clockifyRouter = router({
     }),
 
   // Panel de datos: horas por proyecto y trabajador, medias por trabajador
-  getProjectHours: protectedProcedure
+  getProjectHours: publicProcedure
     .input(z.object({
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
@@ -900,8 +900,8 @@ const clockifyRouter = router({
 
 // ─── Project history router ───────────────────────────────────────────────────
 const historyRouter = router({
-  list: protectedProcedure.query(() => getAllProjectHistory()),
-  updateType: protectedProcedure
+  list: publicProcedure.query(() => getAllProjectHistory()),
+  updateType: publicProcedure
     .input(z.object({ id: z.number(), projectTypeId: z.number() }))
     .mutation(async ({ input }) => {
       await upsertProjectHistory({ id: input.id, projectTypeId: input.projectTypeId } as any);
@@ -912,7 +912,7 @@ const historyRouter = router({
 
 // ─── LLM router ───────────────────────────────────────────────────────────────
 const llmRouter = router({
-  recommend: protectedProcedure
+  recommend: publicProcedure
     .input(
       z.object({
         projectTypeSlug: z.string(),

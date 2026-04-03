@@ -1,5 +1,5 @@
 import AppLayout from "@/components/AppLayout";
-import { useAuth } from "@/_core/hooks/useAuth";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -24,8 +24,8 @@ function ConnectionBadge({ connected, lastTested }: { connected: boolean | null 
 }
 
 export default function ConfigPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  
+  const isAdmin = true; // auth removed
 
   const { data: fixedCosts = [], refetch: refetchFixed } = trpc.fixedCosts.list.useQuery();
   const { data: holdedConfig, refetch: refetchHolded } = trpc.holded.getConfig.useQuery();

@@ -1,5 +1,5 @@
 import AppLayout from "@/components/AppLayout";
-import { useAuth } from "@/_core/hooks/useAuth";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -168,8 +168,8 @@ function CommissionDialog({ open, onClose, initial, onSave }: any) {
 }
 
 export default function TeamPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  
+  const isAdmin = true; // auth removed
 
   const { data: workers = [], refetch: refetchWorkers } = trpc.workers.list.useQuery();
   const { data: commissions = [], refetch: refetchCommissions } = trpc.commissions.list.useQuery();

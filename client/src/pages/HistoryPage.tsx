@@ -1,5 +1,5 @@
 import AppLayout from "@/components/AppLayout";
-import { useAuth } from "@/_core/hooks/useAuth";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -406,8 +406,8 @@ function ProjectRow({
 }
 
 export default function HistoryPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  
+  const isAdmin = true; // auth removed
 
   const { data: history = [], refetch: refetchHistory, isLoading } = trpc.history.list.useQuery();
   const { data: projectTypes = [], refetch: refetchProjectTypes } = trpc.projectTypes.list.useQuery();
