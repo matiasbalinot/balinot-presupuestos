@@ -193,3 +193,9 @@
 - [x] Botón eliminar presupuesto dentro de la calculadora (BudgetEditor) con confirmación
 - [x] Botón eliminar presupuesto en la lista de presupuestos (acciones) con confirmación
 - [x] Acciones aceptar/rechazar presupuesto en la lista de presupuestos
+
+## Mejoras v3.4
+- [x] Dashboard: renombrar "Facturado este mes" a "Presupuestado este mes"
+- [x] Dashboard: tabla de presupuestos recientes con columnas Subtotal, IVA, Total y Estado
+- [x] Dashboard: selector de rango de fechas (hoy, ayer, últimos 7 días, mes actual, mes anterior, trimestre actual, trimestre anterior, año actual, año anterior)
+- [x] Dashboard: todas las métricas (KPIs, estados, tabla) se filtran por el rango seleccionado

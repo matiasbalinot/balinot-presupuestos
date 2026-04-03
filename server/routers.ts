@@ -134,7 +134,9 @@ const BudgetLineInput = z.object({
 const budgetsRouter = router({
   list: protectedProcedure.query(() => getAllBudgets()),
   get: protectedProcedure.input(z.object({ id: z.number() })).query(({ input }) => getBudgetWithLines(input.id)),
-  dashboard: protectedProcedure.query(() => getDashboardStats()),
+  dashboard: protectedProcedure
+    .input(z.object({ from: z.date().optional(), to: z.date().optional() }).optional())
+    .query(({ input }) => getDashboardStats(input?.from, input?.to)),
   nextNumber: protectedProcedure.query(() => getNextBudgetNumber()),
 
   save: protectedProcedure

@@ -240,25 +240,34 @@ export async function getNextBudgetNumber(): Promise<string> {
   return `PRES-${year}-${String(count).padStart(3, "0")}`;
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(from?: Date, to?: Date) {
   const db = await getDb();
   if (!db) return null;
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [totalThisMonth, statusCounts, recentBudgets] = await Promise.all([
+  // Default range: current month
+  const now = new Date();
+  const rangeFrom = from ?? new Date(now.getFullYear(), now.getMonth(), 1);
+  const rangeTo = to ?? new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const [totalInRange, statusCounts, recentBudgets] = await Promise.all([
     db
       .select({ total: sql<number>`COALESCE(SUM(totalSale), 0)`, count: sql<number>`COUNT(*)` })
       .from(budgets)
-      .where(sql`createdAt >= ${startOfMonth}`),
+      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`),
     db
       .select({ status: budgets.status, count: sql<number>`COUNT(*)`, avgMargin: sql<number>`AVG(netMarginPct)` })
       .from(budgets)
+      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`)
       .groupBy(budgets.status),
-    db.select().from(budgets).orderBy(desc(budgets.createdAt)).limit(10),
+    db
+      .select()
+      .from(budgets)
+      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`)
+      .orderBy(desc(budgets.createdAt))
+      .limit(50),
   ]);
 
-  return { totalThisMonth: totalThisMonth[0], statusCounts, recentBudgets };
+  return { totalInRange: totalInRange[0], statusCounts, recentBudgets };
 }
 
 // ─── Project History ──────────────────────────────────────────────────────────
