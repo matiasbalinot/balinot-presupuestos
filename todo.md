@@ -162,3 +162,6 @@
 
 ## Mejoras v2.7
 - [x] Reestructurar resumen económico en dos secciones: VENTA (Subtotal trabajo, Gestión, Comisión) y GASTOS (Coste total, Coste personal, Coste comercial, Coste gastos fijos, Margen bruto, Margen neto)
+
+## Correcciones v2.8
+- [x] Desglose por área: cambiar etiqueta de horas (h) a jornadas (j)

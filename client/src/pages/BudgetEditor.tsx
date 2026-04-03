@@ -1095,7 +1095,7 @@ export default function BudgetEditor() {
                       </div>
                       <div className="text-right">
                         <span className="font-medium">{fmtCurrency(totalS)}</span>
-                        <span className="text-xs text-muted-foreground ml-1">({totalH.toFixed(1)}h)</span>
+                        <span className="text-xs text-muted-foreground ml-1">({totalH.toFixed(1)}j)</span>
                       </div>
                     </div>
                   );
