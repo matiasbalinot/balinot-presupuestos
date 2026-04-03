@@ -124,6 +124,9 @@ export default function BudgetEditor() {
   );
   const createContactMutation = trpc.holded.createContact.useMutation();
 
+  // Holded services
+  const { data: holdedServices = [] } = trpc.holded.listServices.useQuery();
+
   const handleHoldedSearchChange = (val: string) => {
     setHoldedSearchQuery(val);
     if (holdedDebounceRef.current) clearTimeout(holdedDebounceRef.current);
@@ -175,6 +178,10 @@ export default function BudgetEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [showHoldedModal, setShowHoldedModal] = useState(false);
   const [holdedContactId, setHoldedContactId] = useState("");
+  const [holdedServiceId, setHoldedServiceId] = useState("");
+  const [holdedServiceName, setHoldedServiceName] = useState("");
+  const [holdedServiceDesc, setHoldedServiceDesc] = useState("");
+  const [holdedServicePrice, setHoldedServicePrice] = useState("");
 
   // Load existing budget
   useEffect(() => {
@@ -192,6 +199,10 @@ export default function BudgetEditor() {
       setClientPhone((existingBudget as any).clientPhone ?? "");
       setClientWebsite((existingBudget as any).clientWebsite ?? "");
       setHoldedContactId((existingBudget as any).holdedContactId ?? "");
+      setHoldedServiceId((existingBudget as any).holdedServiceId ?? "");
+      setHoldedServiceName((existingBudget as any).holdedServiceName ?? "");
+      setHoldedServiceDesc((existingBudget as any).holdedServiceDesc ?? "");
+      setHoldedServicePrice((existingBudget as any).holdedServicePrice ?? "");
       setProjectTypeId(existingBudget.projectTypeId ?? null);
       setManagementPct(existingBudget.managementPct ?? "40");
       setCommissionType((existingBudget as any).commissionType ?? "none");
@@ -460,6 +471,10 @@ export default function BudgetEditor() {
         netMarginPct: fmt(totals.netMarginPct),
         notes, internalNotes,
         holdedContactId: resolvedHoldedContactId || undefined,
+        holdedServiceId: holdedServiceId || undefined,
+        holdedServiceName: holdedServiceName || undefined,
+        holdedServiceDesc: holdedServiceDesc || undefined,
+        holdedServicePrice: holdedServicePrice || undefined,
         lines: lines.map((l, i) => ({
           id: l.id,
           workerId: l.workerId,
@@ -542,24 +557,13 @@ export default function BudgetEditor() {
     }
   };
 
-  const handleDownloadPdf = async (version: "client" | "internal") => {
+  const handleDownloadPdf = (version: "client" | "internal") => {
     if (!budgetId) {
       toast.error("Guarda el presupuesto primero");
       return;
     }
-    try {
-      const res = await fetch(`/api/pdf/${budgetId}?version=${version}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Error generando PDF");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `presupuesto-${budgetId}-${version}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Error al generar el PDF");
-    }
+    // window.open envía las cookies automáticamente (a diferencia de fetch)
+    window.open(`/api/pdf/${budgetId}?version=${version}`, "_blank");
   };
 
   const areaGroups: Area[] = ["seo", "design", "development", "branding", "various"];
@@ -994,6 +998,91 @@ export default function BudgetEditor() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Servicio Holded */}
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 border-teal-200">
+                      Servicio
+                    </span>
+                    <span className="text-muted-foreground font-normal">Servicio para el cliente (Holded)</span>
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Seleccionar servicio de Holded</Label>
+                  <Select
+                    value={holdedServiceId}
+                    onValueChange={(val) => {
+                      const svc = (holdedServices as any[]).find((s: any) => s.id === val);
+                      if (svc) {
+                        setHoldedServiceId(svc.id);
+                        setHoldedServiceName(svc.name);
+                        setHoldedServiceDesc(svc.desc ?? "");
+                        setHoldedServicePrice(String(svc.price ?? 0));
+                        toast.success(`Servicio "${svc.name}" seleccionado`);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Selecciona un servicio..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(holdedServices as any[]).map((svc: any) => (
+                        <SelectItem key={svc.id} value={svc.id}>
+                          {svc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {holdedServiceId && (
+                  <div className="space-y-3 rounded-md border border-teal-200 bg-teal-50/30 p-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nombre del servicio</Label>
+                      <Input
+                        value={holdedServiceName}
+                        onChange={e => setHoldedServiceName(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Descripción (visible para el cliente)</Label>
+                      <Textarea
+                        value={holdedServiceDesc}
+                        onChange={e => setHoldedServiceDesc(e.target.value)}
+                        placeholder="Descripción del servicio que verá el cliente..."
+                        rows={3}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Precio base (Holded)</Label>
+                        <Input
+                          value={holdedServicePrice}
+                          onChange={e => setHoldedServicePrice(e.target.value)}
+                          className="text-sm"
+                          type="number"
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Precio total presupuesto</Label>
+                        <div className="flex items-center h-9 px-3 rounded-md border bg-muted text-sm font-semibold">
+                          {fmtCurrency(totals.totalSale)}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Se enviará este precio a Holded</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Notes */}
             <Card className="border-border shadow-sm">

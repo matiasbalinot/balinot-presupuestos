@@ -172,3 +172,11 @@
 - [x] Bug: botón Enviar no funciona — ahora es "Enviar a Holded", guarda + crea estimate en Holded
 - [x] Notificación al owner cuando se envía un presupuesto a Holded
 - [x] PDF: etiquetas cambiadas de horas a jornadas, soporte para branding (precio cerrado)
+
+## Mejoras v3.0
+- [x] Nueva sección "Servicio" en la calculadora: selector que consulta servicios dados de alta en Holded
+- [x] Al seleccionar servicio, traer todos sus datos (nombre, descripción, precio, etc.) y mostrarlos editables
+- [x] Guardar servicio seleccionado y datos en BD (schema + router)
+- [x] Corregir envío a Holded: enviar como línea de servicio (no desglose de trabajadores/jornadas)
+- [x] El estimate en Holded debe mostrar: servicio, descripción, precio total — sin desglose interno
+- [x] Bug: PDFs no se generan correctamente — cambiado a window.open para enviar cookies

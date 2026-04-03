@@ -3,20 +3,16 @@ import { getDb } from "./db";
 import { budgets, budgetLines, workers, commissions } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { generateBudgetPdf } from "./pdf";
+import { COOKIE_NAME } from "@shared/const";
+import { parse as parseCookieHeader } from "cookie";
 
 
 export function registerPdfRoutes(app: Express) {
   app.get("/api/pdf/:id", async (req: Request, res: Response) => {
     try {
-      // Auth check
-      const cookieHeader = req.headers.cookie ?? "";
-      const cookies = Object.fromEntries(
-        cookieHeader.split(";").map(c => {
-          const [k, ...v] = c.trim().split("=");
-          return [k, v.join("=")];
-        })
-      );
-      const sessionToken = cookies["manus_session"];
+      // Auth check — usar el mismo nombre de cookie que el SDK de auth
+      const cookies = parseCookieHeader(req.headers.cookie ?? "");
+      const sessionToken = cookies[COOKIE_NAME];
       if (!sessionToken) {
         res.status(401).json({ error: "No autenticado" });
         return;

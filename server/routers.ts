@@ -168,6 +168,10 @@ const budgetsRouter = router({
         notes: z.string().optional(),
         internalNotes: z.string().optional(),
         holdedContactId: z.string().optional(),
+        holdedServiceId: z.string().optional(),
+        holdedServiceName: z.string().optional(),
+        holdedServiceDesc: z.string().optional(),
+        holdedServicePrice: z.string().optional(),
         lines: z.array(BudgetLineInput),
       })
     )
@@ -345,6 +349,26 @@ const holdedRouter = router({
       }
     }),
 
+  listServices: protectedProcedure.query(async () => {
+    const config = await getIntegrationConfig("holded");
+    if (!config?.apiKey) return [];
+    try {
+      const data = await holdedGet(config.apiKey, "/services");
+      const services: any[] = Array.isArray(data) ? data : [];
+      return services.map((s: any) => ({
+        id: s.id ?? "",
+        name: s.name ?? "",
+        desc: s.desc ?? "",
+        price: s.price ?? 0,
+        cost: s.cost ?? 0,
+        taxes: s.taxes ?? [],
+        total: s.total ?? 0,
+      }));
+    } catch {
+      return [];
+    }
+  }),
+
   sendEstimate: protectedProcedure
     .input(
       z.object({
@@ -361,16 +385,19 @@ const holdedRouter = router({
       const budget = await getBudgetWithLines(input.budgetId);
       if (!budget) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const lines = (budget as any).lines ?? [];
-      const items = lines
-        .filter((l: any) => l.area !== "commission" && l.area !== "management")
-        .map((l: any) => ({
-          name: l.description,
-          desc: l.isFixedPrice ? "Precio fijo" : `${parseFloat(l.estimatedDays ?? "0").toFixed(2)} jornadas`,
-          units: l.isFixedPrice ? 1 : parseFloat(l.estimatedDays ?? "0"),
-          price: l.isFixedPrice ? parseFloat(l.fixedPrice ?? "0") : parseFloat(l.salePricePerDay ?? "0"),
-          tax: 21,
-        }));
+      // Usar el servicio de Holded seleccionado como única línea del estimate
+      const serviceName = (budget as any).holdedServiceName ?? budget.projectName;
+      const serviceDesc = (budget as any).holdedServiceDesc ?? "";
+      const totalSale = parseFloat(String((budget as any).totalSale ?? 0));
+
+      const items = [{
+        name: serviceName,
+        desc: serviceDesc,
+        units: 1,
+        price: totalSale,
+        tax: 21,
+        ...(budget as any).holdedServiceId ? { serviceId: (budget as any).holdedServiceId } : {},
+      }];
 
       const body: any = {
         contactName: input.contactName,
