@@ -136,4 +136,9 @@
 - [x] La comisión siempre se suma como gasto al coste total del presupuesto
 
 ## Correcciones v2.1
-- [ ] Alfonso Cala y MWM (externos) deben aparecer disponibles para asignar en el área de Desarrollo en la calculadora
+- [x] Alfonso Cala y MWM (externos) deben aparecer disponibles para asignar en el área de Desarrollo en la calculadora
+
+## Correcciones v2.2
+- [x] Sección Varios: mostrar todos los trabajadores internos de Balinot (no externos)
+- [x] Nueva sección Branding en la calculadora: Rafa como responsable, precio cerrado (coste 1.300€ / venta 2.500€), editable como el resto
+- [x] Branding disponible en cualquier tipo de proyecto (no vinculado a tipología)

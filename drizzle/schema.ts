@@ -128,7 +128,7 @@ export const budgetLines = mysqlTable("budget_lines", {
   id: int("id").autoincrement().primaryKey(),
   budgetId: int("budgetId").notNull(),
   workerId: int("workerId"),
-  area: mysqlEnum("area", ["seo", "design", "development", "management", "commission", "various", "fixed"]).notNull(),
+  area: mysqlEnum("area", ["seo", "design", "development", "management", "commission", "various", "fixed", "branding"]).notNull(),
   description: varchar("description", { length: 300 }).notNull(),
   estimatedDays: decimal("estimatedHours", { precision: 6, scale: 2 }).default("0"),
   costPerDay: decimal("costPerHour", { precision: 10, scale: 2 }).default("0"),

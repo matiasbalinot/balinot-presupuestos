@@ -1,0 +1,1 @@
+ALTER TABLE `budget_lines` MODIFY COLUMN `area` enum('seo','design','development','management','commission','various','fixed','branding') NOT NULL;

@@ -118,7 +118,7 @@ const commissionsRouter = router({
 const BudgetLineInput = z.object({
   id: z.number().optional(),
   workerId: z.number().nullable().optional(),
-  area: z.enum(["seo", "design", "development", "management", "commission", "various", "fixed"]),
+  area: z.enum(["seo", "design", "development", "management", "commission", "various", "fixed", "branding"]),
   description: z.string(),
   estimatedDays: z.string().optional(),
   costPerDay: z.string().optional(),

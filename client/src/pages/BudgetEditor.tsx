@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
-type Area = "seo" | "design" | "development" | "various" | "management" | "commission" | "fixed";
+type Area = "seo" | "design" | "development" | "various" | "branding" | "management" | "commission" | "fixed";
 
 interface BudgetLine {
   id?: number;
@@ -49,6 +49,7 @@ const AREA_LABELS: Record<Area, string> = {
   design: "Diseño",
   development: "Desarrollo",
   various: "Varios",
+  branding: "Branding",
   management: "Gestión",
   commission: "Comisión",
   fixed: "Gastos fijos",
@@ -59,6 +60,7 @@ const AREA_COLORS: Record<Area, string> = {
   design:      "bg-pink-50 text-pink-700 border-pink-200",
   development: "bg-blue-50 text-blue-700 border-blue-200",
   various:     "bg-orange-50 text-orange-700 border-orange-200",
+  branding:    "bg-emerald-50 text-emerald-700 border-emerald-200",
   management:  "bg-gray-50 text-gray-600 border-gray-200",
   commission:  "bg-yellow-50 text-yellow-700 border-yellow-200",
   fixed:       "bg-red-50 text-red-600 border-red-200",
@@ -80,7 +82,10 @@ function fmtCurrency(n: number | string): string {
 function calcLine(line: BudgetLine): BudgetLine {
   if (line.isFixedPrice) {
     const fp = parseFloat(line.fixedPrice) || 0;
-    return { ...line, lineCost: fmt(fp * 0.6), lineSale: fmt(fp) };
+    // Use costPerDay as the actual cost when it's set, otherwise fallback to 60% of fixed price
+    const cost = parseFloat(line.costPerDay);
+    const actualCost = !isNaN(cost) && cost > 0 ? cost : fp * 0.6;
+    return { ...line, lineCost: fmt(actualCost), lineSale: fmt(fp) };
   }
   const hours = parseFloat(line.estimatedDays) || 0;
   const cost = parseFloat(line.costPerDay) || 0;
@@ -223,17 +228,25 @@ export default function BudgetEditor() {
       if (area === "seo") return w.department === "seo";
       if (area === "design") return w.department === "design";
       if (area === "development") return w.department === "development" || w.department === "external";
-      if (area === "various") return w.department === "various";
+      if (area === "branding") return w.department === "design"; // Rafa is in design
+      if (area === "various") return !w.isExternal; // All internal Balinot workers
       return false;
     });
-    const w = areaWorkers[0];
+    // For branding: prefer Rafa, use fixed price (cost 1300, sale 2500)
+    const rafa = area === "branding"
+      ? areaWorkers.find((w: any) => w.name.toLowerCase().includes("rafa")) ?? areaWorkers[0]
+      : areaWorkers[0];
+    const w = rafa;
+    const isBranding = area === "branding";
     const newLine: BudgetLine = calcLine({
       tempId: uid(), workerId: w?.id ?? null, area,
-      description: `${AREA_LABELS[area]}${w ? ` — ${w.name}` : ""}`,
-      estimatedDays: "0",
-      costPerDay: String(w?.costPerDay ?? "0"),
-      salePricePerDay: String(w?.salePricePerDay ?? "0"),
-      lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0",
+      description: isBranding ? `Branding${w ? ` — ${w.name}` : ""}` : `${AREA_LABELS[area]}${w ? ` — ${w.name}` : ""}`,
+      estimatedDays: "1",
+      costPerDay: isBranding ? "1300" : String(w?.costPerDay ?? "0"),
+      salePricePerDay: isBranding ? "2500" : String(w?.salePricePerDay ?? "0"),
+      lineCost: "0", lineSale: "0",
+      isFixedPrice: isBranding,
+      fixedPrice: isBranding ? "2500" : "0",
       sortOrder: lines.length,
     });
     setLines([...lines, newLine]);
@@ -390,7 +403,7 @@ export default function BudgetEditor() {
     }
   };
 
-  const areaGroups: Area[] = ["seo", "design", "development", "various"];
+  const areaGroups: Area[] = ["seo", "design", "development", "branding", "various"];
   const linesByArea = (area: Area) => lines.filter(l => l.area === area);
 
   return (
@@ -587,9 +600,15 @@ export default function BudgetEditor() {
                       {/* Column headers */}
                       <div className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 px-1">
                         <span className="text-xs text-muted-foreground">Descripción / Trabajador</span>
-                        <span className="text-xs text-muted-foreground text-center">Jornadas</span>
-                        <span className="text-xs text-muted-foreground text-right">€/j coste</span>
-                        <span className="text-xs text-muted-foreground text-right">€/j venta</span>
+                        {area === "branding" ? (
+                          <span className="text-xs text-muted-foreground text-center col-span-3">Precio cerrado</span>
+                        ) : (
+                          <>
+                            <span className="text-xs text-muted-foreground text-center">Jornadas</span>
+                            <span className="text-xs text-muted-foreground text-right">€/j coste</span>
+                            <span className="text-xs text-muted-foreground text-right">€/j venta</span>
+                          </>
+                        )}
                         <span className="text-xs text-muted-foreground text-right">Coste</span>
                         <span className="text-xs text-muted-foreground text-right">Venta</span>
                         <span />
@@ -616,11 +635,14 @@ export default function BudgetEditor() {
                                 <SelectItem value="none">Sin asignar</SelectItem>
                                 {(workers as any[])
                                   .filter((w: any) => {
-                                    if (w.department === area) return true;
-                                    if (w.department === "various") return true;
-                                    // External workers available in development area
-                                    if (w.department === "external" && area === "development") return true;
-                                    return false;
+                                    // Branding: only design workers (Rafa)
+                                    if (area === "branding") return w.department === "design";
+                                    // Various: all internal Balinot workers (no externals)
+                                    if (area === "various") return !w.isExternal;
+                                    // Development: internal dev + external workers
+                                    if (area === "development") return w.department === "development" || w.department === "external";
+                                    // Other areas: exact department match
+                                    return w.department === area;
                                   })
                                   .map((w: any) => (
                                     <SelectItem key={w.id} value={String(w.id)}>
@@ -631,35 +653,56 @@ export default function BudgetEditor() {
                             </Select>
                           </div>
 
-                          {/* Days */}
-                          <Input
-                            type="number"
-                            value={line.estimatedDays}
-                            onChange={e => updateLine(line.tempId, { estimatedDays: e.target.value })}
-                            className="h-7 text-xs text-center"
-                            min="0" step="0.5"
-                            disabled={line.isFixedPrice}
-                          />
-
-                          {/* Cost/day */}
-                          <Input
-                            type="number"
-                            value={line.costPerDay}
-                            onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
-                            className="h-7 text-xs text-right"
-                            min="0"
-                            disabled={line.isFixedPrice}
-                          />
-
-                          {/* Sale/day */}
-                          <Input
-                            type="number"
-                            value={line.salePricePerDay}
-                            onChange={e => updateLine(line.tempId, { salePricePerDay: e.target.value })}
-                            className="h-7 text-xs text-right"
-                            min="0"
-                            disabled={line.isFixedPrice}
-                          />
+                          {/* Days / Fixed price for branding */}
+                          {line.isFixedPrice ? (
+                            <>
+                              {/* Fixed price: sale price editable, spans 3 cols */}
+                              <div className="col-span-3 flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">Venta:</span>
+                                <Input
+                                  type="number"
+                                  value={line.fixedPrice}
+                                  onChange={e => updateLine(line.tempId, { fixedPrice: e.target.value })}
+                                  className="h-7 text-xs text-right flex-1"
+                                  min="0"
+                                  placeholder="Precio venta"
+                                />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">Coste:</span>
+                                <Input
+                                  type="number"
+                                  value={line.costPerDay}
+                                  onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
+                                  className="h-7 text-xs text-right flex-1"
+                                  min="0"
+                                  placeholder="Coste"
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Input
+                                type="number"
+                                value={line.estimatedDays}
+                                onChange={e => updateLine(line.tempId, { estimatedDays: e.target.value })}
+                                className="h-7 text-xs text-center"
+                                min="0" step="0.5"
+                              />
+                              <Input
+                                type="number"
+                                value={line.costPerDay}
+                                onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
+                                className="h-7 text-xs text-right"
+                                min="0"
+                              />
+                              <Input
+                                type="number"
+                                value={line.salePricePerDay}
+                                onChange={e => updateLine(line.tempId, { salePricePerDay: e.target.value })}
+                                className="h-7 text-xs text-right"
+                                min="0"
+                              />
+                            </>
+                          )}
 
                           {/* Line cost */}
                           <span className="text-xs text-right text-muted-foreground font-mono">
