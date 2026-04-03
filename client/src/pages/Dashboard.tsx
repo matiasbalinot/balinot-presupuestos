@@ -329,33 +329,32 @@ export default function Dashboard() {
               ) : (
                 <div>
                   {/* Table header */}
-                  <div className="grid grid-cols-[1fr_110px_80px_80px_95px_85px] gap-2 px-4 py-2 border-b border-border">
+                  <div className="grid grid-cols-[1fr_110px_95px_65px_85px] gap-2 px-4 py-2 border-b border-border">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Proyecto</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Fecha</span>
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Subtotal</span>
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">IVA</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Total</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Margen</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Estado</span>
                   </div>
                   {recentBudgets.map((budget: any) => {
                     const subtotal = parseFloat(String(budget.totalSale ?? 0));
                     const taxRate = parseFloat(String(budget.taxRate ?? 21));
-                    const ivaAmount = subtotal * (taxRate / 100);
-                    const total = subtotal + ivaAmount;
+                    const total = subtotal * (1 + taxRate / 100);
+                    const margin = parseFloat(String(budget.netMarginPct ?? 0));
+                    const marginColor = margin >= 35 ? "#22c55e" : margin >= 20 ? "#f59e0b" : "#ef4444";
                     return (
                       <Link
                         key={budget.id}
                         href={`/presupuestos/${budget.id}`}
-                        className="grid grid-cols-[1fr_110px_80px_80px_95px_85px] gap-2 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0"
+                        className="grid grid-cols-[1fr_110px_95px_65px_85px] gap-2 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0"
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{budget.projectName}</p>
                           <p className="text-xs text-muted-foreground truncate">{budget.clientName}</p>
                         </div>
                         <span className="text-xs text-muted-foreground text-right tabular-nums">{formatDate(budget.updatedAt ?? budget.createdAt)}</span>
-                        <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(subtotal)}</span>
-                        <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(ivaAmount)}</span>
                         <span className="text-sm font-semibold text-foreground text-right tabular-nums">{formatCurrency(total)}</span>
+                        <span className="text-sm font-semibold text-right tabular-nums" style={{ color: marginColor }}>{margin > 0 ? `${margin.toFixed(1)}%` : "—"}</span>
                         <div className="flex justify-center">
                           <StatusBadge status={budget.status} />
                         </div>

@@ -206,3 +206,7 @@
 
 ## Mejoras v3.6
 - [x] Página /presupuestos: añadir columnas Subtotal e IVA a la tabla (junto a Total, Margen, Estado)
+
+## Mejoras v3.7
+- [x] Dashboard tabla presupuestos recientes: eliminar columnas Subtotal e IVA, mantener Total, añadir Margen (solo porcentaje numérico con color)
+- [x] /presupuestos: columna Margen solo con número (sin etiqueta de texto "Bajo margen"/"Ajustado")

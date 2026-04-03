@@ -212,7 +212,7 @@ export default function BudgetList() {
                 {/* Margin */}
                 <div className="flex justify-center">
                   {parseFloat(budget.netMarginPct) > 0 ? (
-                    <MarginBadge pct={parseFloat(budget.netMarginPct)} showLabel={true} />
+                    <MarginBadge pct={parseFloat(budget.netMarginPct)} showLabel={false} />
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
