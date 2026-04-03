@@ -95,6 +95,11 @@ function formatCurrency(val: number | string | null | undefined): string {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 }
 
+function formatDate(d: string | Date | null | undefined): string {
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(d));
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [rangeKey, setRangeKey] = useState<RangeKey>("current_month");
@@ -110,6 +115,17 @@ export default function Dashboard() {
   const totalInRange = stats?.totalInRange;
 
   const getCount = (status: string) => Number(statusCounts.find((s: any) => s.status === status)?.count ?? 0);
+
+  // Get the most recently updated budget for each status
+  const getLatestUpdated = (status: string) => {
+    const budgetsWithStatus = recentBudgets.filter((b: any) => b.status === status);
+    if (budgetsWithStatus.length === 0) return null;
+    return budgetsWithStatus.reduce((latest: any, b: any) => {
+      const bDate = new Date(b.updatedAt ?? b.createdAt);
+      const latestDate = new Date(latest.updatedAt ?? latest.createdAt);
+      return bDate > latestDate ? b : latest;
+    });
+  };
 
   const totalBudgets = statusCounts.reduce((sum: number, s: any) => sum + Number(s.count ?? 0), 0);
   const acceptedCount = getCount("accepted");
@@ -242,7 +258,7 @@ export default function Dashboard() {
                 Estado de presupuestos
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {[
                 { status: "draft", label: "Borrador", icon: Clock, color: "#9a9ca8" },
                 { status: "sent", label: "Enviado", icon: FileText, color: "#3b82f6" },
@@ -251,6 +267,7 @@ export default function Dashboard() {
               ].map(({ status, label, icon: Icon, color }) => {
                 const count = getCount(status);
                 const pct = totalBudgets > 0 ? (count / totalBudgets) * 100 : 0;
+                const latest = getLatestUpdated(status);
                 return (
                   <div key={status} className="flex items-center gap-3">
                     <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />
@@ -265,6 +282,12 @@ export default function Dashboard() {
                           style={{ width: `${pct}%`, background: color }}
                         />
                       </div>
+                      {latest && (
+                        <p className="text-[10px] text-muted-foreground/70 mt-1 truncate">
+                          Último: <span className="font-medium text-muted-foreground">{latest.projectName}</span>
+                          {" · "}{formatDate(latest.updatedAt ?? latest.createdAt)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );

@@ -244,25 +244,31 @@ export async function getDashboardStats(from?: Date, to?: Date) {
   const db = await getDb();
   if (!db) return null;
 
-  // Default range: current month
+  // Default range: current month (UTC-based to avoid mysql2 timezone issues)
   const now = new Date();
-  const rangeFrom = from ?? new Date(now.getFullYear(), now.getMonth(), 1);
-  const rangeTo = to ?? new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const rangeFrom = from ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const rangeTo = to ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+  // Use UNIX_TIMESTAMP() to avoid mysql2 timezone serialization issues.
+  // mysql2 serializes JS Date objects using the server's local timezone (UTC-4),
+  // which shifts the range by 4 hours in MySQL. Comparing unix timestamps avoids this.
+  const fromTs = Math.floor(rangeFrom.getTime() / 1000);
+  const toTs = Math.floor(rangeTo.getTime() / 1000);
 
   const [totalInRange, statusCounts, recentBudgets] = await Promise.all([
     db
       .select({ total: sql<number>`COALESCE(SUM(totalSale), 0)`, count: sql<number>`COUNT(*)` })
       .from(budgets)
-      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`),
+      .where(sql`UNIX_TIMESTAMP(createdAt) >= ${fromTs} AND UNIX_TIMESTAMP(createdAt) <= ${toTs}`),
     db
       .select({ status: budgets.status, count: sql<number>`COUNT(*)`, avgMargin: sql<number>`AVG(netMarginPct)` })
       .from(budgets)
-      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`)
+      .where(sql`UNIX_TIMESTAMP(createdAt) >= ${fromTs} AND UNIX_TIMESTAMP(createdAt) <= ${toTs}`)
       .groupBy(budgets.status),
     db
       .select()
       .from(budgets)
-      .where(sql`createdAt >= ${rangeFrom} AND createdAt <= ${rangeTo}`)
+      .where(sql`UNIX_TIMESTAMP(createdAt) >= ${fromTs} AND UNIX_TIMESTAMP(createdAt) <= ${toTs}`)
       .orderBy(desc(budgets.createdAt))
       .limit(50),
   ]);

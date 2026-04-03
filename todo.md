@@ -199,3 +199,7 @@
 - [x] Dashboard: tabla de presupuestos recientes con columnas Subtotal, IVA, Total y Estado
 - [x] Dashboard: selector de rango de fechas (hoy, ayer, últimos 7 días, mes actual, mes anterior, trimestre actual, trimestre anterior, año actual, año anterior)
 - [x] Dashboard: todas las métricas (KPIs, estados, tabla) se filtran por el rango seleccionado
+
+## Correcciones v3.5
+- [x] Bug: filtrado por fechas en dashboard no funciona — corregido usando UNIX_TIMESTAMP() en las queries SQL para evitar el problema de timezone de mysql2 (servidor UTC-4 vs BD UTC)
+- [x] Dashboard: mostrar nombre del presupuesto más reciente y fecha de último guardado en cada fila del panel de estado
