@@ -550,8 +550,9 @@ function getDeptFromName(name: string): "seo" | "design" | "development" | "vari
 const PROJECT_TYPE_PATTERNS: { slug: string; name: string; patterns: string[] }[] = [
   { slug: "web-corporativa-codigo",      name: "Web corporativa a código",         patterns: ["web corporativa a código", "web corporativa a codigo"] },
   { slug: "web-corporativa-maquetador",  name: "Web corporativa con maquetador",   patterns: ["web corporativa con maquetador"] },
+  { slug: "tienda-online",               name: "Tienda online",                    patterns: ["tienda online", "ecommerce", "e-commerce", "woocommerce", "shopify"] },
   { slug: "app-web",                     name: "App web",                          patterns: ["app web"] },
-  { slug: "landing-page",               name: "Landing page",                     patterns: ["landing page", "landing"] },
+  { slug: "landing-page",                name: "Landing page",                     patterns: ["landing page", "landing"] },
 ];
 
 /** Devuelve el slug de tipología si el nombre del proyecto coincide, o null si no coincide */
@@ -563,28 +564,22 @@ function detectProjectTypeSlug(projectName: string): string | null {
   return null;
 }
 
-/** Asegura que las 4 tipologías existen en la BD y devuelve un mapa slug → id */
+/** Asegura que las 5 tipologías existen en la BD y devuelve un mapa slug → id */
 async function ensureProjectTypes(): Promise<Record<string, number>> {
+  // Paso 1: insertar las tipologías que no existen aún
   const existing = await getAllProjectTypes();
-  const slugMap: Record<string, number> = {};
   for (const pt of PROJECT_TYPE_PATTERNS) {
     const found = existing.find((e: any) => e.slug === pt.slug);
-    if (found) {
-      slugMap[pt.slug] = found.id;
-    } else {
-      const result = await upsertProjectType({ name: pt.name, slug: pt.slug } as any);
-      // upsertProjectType returns insertId on insert
-      const newId = (result as any)?.insertId ?? (result as any)?.id;
-      if (newId) slugMap[pt.slug] = newId;
+    if (!found) {
+      await upsertProjectType({ name: pt.name, slug: pt.slug } as any);
     }
   }
-  // Refresh in case upsert returned ids differently
+  // Paso 2: leer de nuevo para obtener los ids reales de todas
   const refreshed = await getAllProjectTypes();
+  const slugMap: Record<string, number> = {};
   for (const pt of PROJECT_TYPE_PATTERNS) {
-    if (!slugMap[pt.slug]) {
-      const found = refreshed.find((e: any) => e.slug === pt.slug);
-      if (found) slugMap[pt.slug] = found.id;
-    }
+    const found = refreshed.find((e: any) => e.slug === pt.slug);
+    if (found) slugMap[pt.slug] = found.id;
   }
   return slugMap;
 }
@@ -655,21 +650,39 @@ const clockifyRouter = router({
         if (!projectTypeId) { skipped++; continue; }
 
         try {
-          // Obtener informe de horas por usuario para este proyecto (desde 2020)
-          const reportRes = await axios.post(
-            `${CLOCKIFY_REPORTS}/workspaces/${wsId}/reports/summary`,
-            {
-              dateRangeStart: "2020-01-01T00:00:00.000Z",
-              dateRangeEnd: new Date().toISOString().replace(/\.\d{3}Z$/, ".999Z"),
-              summaryFilter: { groups: ["USER"] },
-              projects: { ids: [project.id], contains: "CONTAINS" },
-              amountShown: "HIDE_AMOUNT",
-            },
-            { headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" } }
-          );
-
-          const groupOne: any[] = reportRes.data?.groupOne ?? [];
-          const totalH = (groupOne.reduce((s: number, g: any) => s + (g.duration ?? 0), 0)) / 3600;
+          // Obtener informe de horas por usuario para este proyecto.
+          // El plan gratuito de Clockify limita el rango a 365 días por petición,
+          // así que hacemos una petición por año desde 2020 hasta el año actual y acumulamos.
+          const currentYear = new Date().getFullYear();
+          const workerHoursMap: Record<string, { id: string; name: string; hours: number }> = {};
+          for (let year = 2020; year <= currentYear; year++) {
+            const yearStart = `${year}-01-01T00:00:00.000Z`;
+            const yearEnd = year < currentYear
+              ? `${year}-12-31T23:59:59.999Z`
+              : new Date().toISOString().replace(/\.\d{3}Z$/, ".999Z");
+            try {
+              const yearRes: { data: { groupOne?: Array<{ id: string; name: string; duration: number }> } } = await axios.post(
+                `${CLOCKIFY_REPORTS}/workspaces/${wsId}/reports/summary`,
+                {
+                  dateRangeStart: yearStart,
+                  dateRangeEnd: yearEnd,
+                  summaryFilter: { groups: ["USER"] },
+                  projects: { ids: [project.id], contains: "CONTAINS" },
+                  amountShown: "HIDE_AMOUNT",
+                },
+                { headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" } }
+              );
+              for (const g of (yearRes.data?.groupOne ?? []) as Array<{ id: string; name: string; duration: number }>) {
+                const key = g.id ?? g.name ?? "unknown";
+                if (!workerHoursMap[key]) workerHoursMap[key] = { id: g.id, name: g.name, hours: 0 };
+                workerHoursMap[key].hours += (g.duration ?? 0) / 3600;
+              }
+            } catch {
+              // Año sin datos o sin permisos — continuar con el siguiente
+            }
+          }
+          const groupOne = Object.values(workerHoursMap);
+          const totalH = groupOne.reduce((s, g) => s + g.hours, 0);
           if (totalH < 0.1) { skipped++; continue; }
 
           // Upsert projectHistory (sin totales — se recalcularán desde workers)
@@ -695,7 +708,8 @@ const clockifyRouter = router({
             const member = members.find((m: any) => m.id === group.id);
             const workerName = member?.name ?? group.name ?? "Desconocido";
             const dept = getDeptFromName(workerName);
-            const hours = (group.duration ?? 0) / 3600;
+            // group.hours ya está en horas (acumulado por año desde workerHoursMap)
+            const hours = group.hours ?? 0;
             if (hours < 0.01) continue;
             const days = hours / HOURS_PER_WORKDAY;
             await upsertProjectHistoryWorker({
@@ -715,7 +729,8 @@ const clockifyRouter = router({
 
           affectedTypeIds.add(projectTypeId);
           synced++;
-        } catch {
+        } catch (syncErr: any) {
+          console.error("[syncProjects] Error en proyecto", project.name, ":", syncErr?.response?.data ?? syncErr?.message ?? syncErr);
           skipped++;
         }
       }

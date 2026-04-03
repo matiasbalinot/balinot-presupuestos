@@ -212,11 +212,11 @@
 - [x] /presupuestos: columna Margen solo con número (sin etiqueta de texto "Bajo margen"/"Ajustado")
 
 ## Integración Clockify v4.0
-- [ ] syncProjects: detectar tipología de proyecto por nombre en Clockify (web corporativa a código, web corporativa con maquetador, app web, landing page)
-- [ ] syncProjects: importar horas reales al histórico asociadas a la tipología detectada
-- [ ] syncProjects: recalcular medias de días por departamento para cada tipología tras la importación
-- [ ] Asegurar que las tipologías de proyecto en la app coinciden con las 4 tipologías de Clockify
-- [ ] BudgetEditor: al seleccionar tipología, pre-rellenar días estimados con las medias reales de Clockify
+- [x] syncProjects: detectar tipología de proyecto por nombre en Clockify (web corporativa a código, web corporativa con maquetador, app web, landing page)
+- [x] syncProjects: importar horas reales al histórico asociadas a la tipología detectada
+- [x] syncProjects: recalcular medias de días por departamento para cada tipología tras la importación
+- [x] Asegurar que las tipologías de proyecto en la app coinciden con las 4 tipologías de Clockify
+- [x] BudgetEditor: al seleccionar tipología, pre-rellenar días estimados con las medias reales de Clockify
 
 ## Integración Clockify v4.1 (ampliación)
 - [x] Backend: syncProjects convierte horas a jornadas (7h = 1 jornada) y guarda por trabajador en project_history_workers
@@ -225,3 +225,8 @@
 - [x] Frontend: permitir añadir trabajadores externos no fichados en Clockify (departamento "Externo")
 ## Bugs v4.1
 - [x] Bug: suma de coste de personal en el editor de presupuestos es incorrecta — corregido: al cargar un presupuesto existente, las líneas ahora pasan por calcLine() para recalcular lineCost/lineSale desde estimatedDays×costPerDay, evitando inconsistencias con valores guardados en BD
+
+## Bugs v4.2
+- [x] Bug: syncProjects importaba 0 — corregido: el plan gratuito de Clockify limita el rango a 365 días; ahora se hacen peticiones por año (2020…actual) y se acumulan las horas por trabajador
+- [x] Bug: tipología "Web corporativa" sobrante eliminada de la BD; ahora existen exactamente las 5 correctas
+- [x] Añadida tipología "Tienda online" a PROJECT_TYPE_PATTERNS (faltaba en el código)
