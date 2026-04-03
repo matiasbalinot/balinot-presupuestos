@@ -329,8 +329,9 @@ export default function Dashboard() {
               ) : (
                 <div>
                   {/* Table header */}
-                  <div className="grid grid-cols-[1fr_90px_90px_100px_90px] gap-2 px-4 py-2 border-b border-border">
+                  <div className="grid grid-cols-[1fr_110px_80px_80px_95px_85px] gap-2 px-4 py-2 border-b border-border">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Proyecto</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Fecha</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Subtotal</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">IVA</span>
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Total</span>
@@ -345,12 +346,13 @@ export default function Dashboard() {
                       <Link
                         key={budget.id}
                         href={`/presupuestos/${budget.id}`}
-                        className="grid grid-cols-[1fr_90px_90px_100px_90px] gap-2 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0"
+                        className="grid grid-cols-[1fr_110px_80px_80px_95px_85px] gap-2 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0"
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{budget.projectName}</p>
                           <p className="text-xs text-muted-foreground truncate">{budget.clientName}</p>
                         </div>
+                        <span className="text-xs text-muted-foreground text-right tabular-nums">{formatDate(budget.updatedAt ?? budget.createdAt)}</span>
                         <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(subtotal)}</span>
                         <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(ivaAmount)}</span>
                         <span className="text-sm font-semibold text-foreground text-right tabular-nums">{formatCurrency(total)}</span>
