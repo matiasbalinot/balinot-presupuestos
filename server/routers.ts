@@ -28,6 +28,11 @@ import {
   upsertFixedCost,
   upsertIntegrationConfig,
   upsertProjectHistory,
+  upsertProjectHistoryWorker,
+  clearProjectHistoryWorkers,
+  recalcProjectHistoryTotals,
+  getProjectHistoryWorkers,
+  deleteProjectHistoryWorker,
   upsertProjectType,
   upsertWorker,
 } from "./db";
@@ -525,7 +530,7 @@ const DEPT_MAP: Record<string, "seo" | "design" | "development" | "various"> = {
   "josé luis": "development",
   ana: "development",
   angel: "development",
-  ángel: "development",
+  "ángel": "development",
   fran: "development",
   francisco: "development",
   sergio: "development",
@@ -538,6 +543,50 @@ function getDeptFromName(name: string): "seo" | "design" | "development" | "vari
     if (lower.includes(key)) return dept;
   }
   return "various";
+}
+
+// Tipologías de proyecto reconocidas por nombre en Clockify
+// Orden importa: los más específicos primero
+const PROJECT_TYPE_PATTERNS: { slug: string; name: string; patterns: string[] }[] = [
+  { slug: "web-corporativa-codigo",      name: "Web corporativa a código",         patterns: ["web corporativa a código", "web corporativa a codigo"] },
+  { slug: "web-corporativa-maquetador",  name: "Web corporativa con maquetador",   patterns: ["web corporativa con maquetador"] },
+  { slug: "app-web",                     name: "App web",                          patterns: ["app web"] },
+  { slug: "landing-page",               name: "Landing page",                     patterns: ["landing page", "landing"] },
+];
+
+/** Devuelve el slug de tipología si el nombre del proyecto coincide, o null si no coincide */
+function detectProjectTypeSlug(projectName: string): string | null {
+  const lower = projectName.toLowerCase();
+  for (const pt of PROJECT_TYPE_PATTERNS) {
+    if (pt.patterns.some((p) => lower.includes(p))) return pt.slug;
+  }
+  return null;
+}
+
+/** Asegura que las 4 tipologías existen en la BD y devuelve un mapa slug → id */
+async function ensureProjectTypes(): Promise<Record<string, number>> {
+  const existing = await getAllProjectTypes();
+  const slugMap: Record<string, number> = {};
+  for (const pt of PROJECT_TYPE_PATTERNS) {
+    const found = existing.find((e: any) => e.slug === pt.slug);
+    if (found) {
+      slugMap[pt.slug] = found.id;
+    } else {
+      const result = await upsertProjectType({ name: pt.name, slug: pt.slug } as any);
+      // upsertProjectType returns insertId on insert
+      const newId = (result as any)?.insertId ?? (result as any)?.id;
+      if (newId) slugMap[pt.slug] = newId;
+    }
+  }
+  // Refresh in case upsert returned ids differently
+  const refreshed = await getAllProjectTypes();
+  for (const pt of PROJECT_TYPE_PATTERNS) {
+    if (!slugMap[pt.slug]) {
+      const found = refreshed.find((e: any) => e.slug === pt.slug);
+      if (found) slugMap[pt.slug] = found.id;
+    }
+  }
+  return slugMap;
 }
 
 const clockifyRouter = router({
@@ -573,98 +622,161 @@ const clockifyRouter = router({
   }),
 
   syncProjects: adminProcedure
-    .input(z.object({ projectTypeId: z.number().optional() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({}))
+    .mutation(async () => {
       const config = await getIntegrationConfig("clockify");
       if (!config?.apiKey || !config?.workspaceId)
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Clockify no está configurado." });
-
       const wsId = config.workspaceId;
       const headers = { "X-Api-Key": config.apiKey };
 
-      // Get all projects
-      const projectsRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/projects?page-size=200`, { headers });
-      const projects: any[] = projectsRes.data;
+      // 1. Asegurar que las 4 tipologías existen en la BD
+      const slugToId = await ensureProjectTypes();
 
-      // Get workspace members to map by department
+      // 2. Obtener todos los proyectos de Clockify
+      const projectsRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/projects?page-size=500`, { headers });
+      const allProjects: any[] = projectsRes.data;
+
+      // 3. Filtrar solo proyectos cuyo nombre coincide con alguna tipología
+      const relevantProjects = allProjects.filter((p: any) => detectProjectTypeSlug(p.name) !== null);
+
+      // 4. Obtener miembros del workspace para mapear departamentos
       const membersRes = await axios.get(`${CLOCKIFY_BASE}/workspaces/${wsId}/users`, { headers });
       const members: any[] = membersRes.data;
 
       let synced = 0;
-      for (const project of projects.slice(0, 50)) {
+      let skipped = 0;
+      const affectedTypeIds = new Set<number>();
+      const HOURS_PER_WORKDAY = 7; // 7h = 1 jornada
+
+      for (const project of relevantProjects) {
+        const typeSlug = detectProjectTypeSlug(project.name)!;
+        const projectTypeId = slugToId[typeSlug];
+        if (!projectTypeId) { skipped++; continue; }
+
         try {
-          // Get summary report for this project
+          // Obtener informe de horas por usuario para este proyecto (desde 2020)
           const reportRes = await axios.post(
             `${CLOCKIFY_REPORTS}/workspaces/${wsId}/reports/summary`,
             {
-              dateRangeStart: "2020-01-01T00:00:00Z",
-              dateRangeEnd: new Date().toISOString(),
+              dateRangeStart: "2020-01-01T00:00:00.000Z",
+              dateRangeEnd: new Date().toISOString().replace(/\.\d{3}Z$/, ".999Z"),
               summaryFilter: { groups: ["USER"] },
               projects: { ids: [project.id], contains: "CONTAINS" },
+              amountShown: "HIDE_AMOUNT",
             },
             { headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json" } }
           );
 
-          const groupOne = reportRes.data?.groupOne ?? [];
-          let seoH = 0, designH = 0, devH = 0, variousH = 0;
+          const groupOne: any[] = reportRes.data?.groupOne ?? [];
+          const totalH = (groupOne.reduce((s: number, g: any) => s + (g.duration ?? 0), 0)) / 3600;
+          if (totalH < 0.1) { skipped++; continue; }
 
-          for (const group of groupOne) {
-            const userId = group.id;
-            const member = members.find((m: any) => m.id === userId);
-            const dept = member ? getDeptFromName(member.name) : "various";
-            const hours = (group.duration ?? 0) / 3600;
-            if (dept === "seo") seoH += hours;
-            else if (dept === "design") designH += hours;
-            else if (dept === "development") devH += hours;
-            else variousH += hours;
-          }
-
-          const totalH = seoH + designH + devH + variousH;
-          if (totalH < 0.1) continue;
-
-          // Convert hours to workdays (8h = 1 day)
-          const HOURS_PER_DAY = 8;
-          const seoDays = seoH / HOURS_PER_DAY;
-          const designDays = designH / HOURS_PER_DAY;
-          const devDays = devH / HOURS_PER_DAY;
-          const variousDays = variousH / HOURS_PER_DAY;
-          const totalDays = totalH / HOURS_PER_DAY;
-
-          const efficiency = totalDays > 0
-            ? totalDays < 2.5 ? "efficient" : totalDays < 5 ? "correct" : "excess"
-            : undefined;
-
-          await upsertProjectHistory({
+          // Upsert projectHistory (sin totales — se recalcularán desde workers)
+          // Primero obtenemos el id existente (si lo hay) para limpiar workers previos
+          const historyId = await upsertProjectHistory({
             clockifyProjectId: project.id,
             projectName: project.name,
-            projectTypeId: input.projectTypeId ?? null,
-            realSeoDays: String(seoDays.toFixed(2)),
-            realDesignDays: String(designDays.toFixed(2)),
-            realDevDays: String(devDays.toFixed(2)),
-            realVariousDays: String(variousDays.toFixed(2)),
-            realTotalDays: String(totalDays.toFixed(2)),
-            efficiencyStatus: efficiency as any,
+            projectTypeId,
+            realSeoDays: "0",
+            realDesignDays: "0",
+            realDevDays: "0",
+            realVariousDays: "0",
+            realTotalDays: "0",
+            efficiencyStatus: "correct",
             syncedAt: new Date(),
           } as any);
+
+          // Limpiar workers previos de Clockify (preserva los manuales) antes de reinsertar
+          await clearProjectHistoryWorkers(historyId);
+
+          // Guardar jornadas por trabajador (7h = 1 jornada)
+          for (const group of groupOne) {
+            const member = members.find((m: any) => m.id === group.id);
+            const workerName = member?.name ?? group.name ?? "Desconocido";
+            const dept = getDeptFromName(workerName);
+            const hours = (group.duration ?? 0) / 3600;
+            if (hours < 0.01) continue;
+            const days = hours / HOURS_PER_WORKDAY;
+            await upsertProjectHistoryWorker({
+              projectHistoryId: historyId,
+              workerName,
+              department: dept,
+              clockifyUserId: group.id ?? null,
+              hoursFromClockify: String(hours.toFixed(2)),
+              hoursAdjustment: "0",
+              totalDays: String(days.toFixed(2)),
+              isManual: false,
+            } as any);
+          }
+
+          // Recalcular totales del proyecto desde los workers
+          await recalcProjectHistoryTotals(historyId);
+
+          affectedTypeIds.add(projectTypeId);
           synced++;
         } catch {
-          // Skip projects that fail
+          skipped++;
         }
       }
 
-      // Recalc averages if projectTypeId given
-      if (input.projectTypeId) {
-        await recalcProjectTypeAverages(input.projectTypeId);
+      // 5. Recalcular medias para todas las tipologías que tuvieron cambios
+      for (const typeId of Array.from(affectedTypeIds)) {
+        await recalcProjectTypeAverages(typeId);
       }
 
       await upsertIntegrationConfig("clockify", { lastSyncedAt: new Date() });
-      return { success: true, synced, total: projects.length };
+      return {
+        success: true,
+        synced,
+        skipped,
+        total: allProjects.length,
+        relevant: relevantProjects.length,
+        affectedTypes: affectedTypeIds.size,
+      };
     }),
 
   getConfig: protectedProcedure.query(() => getIntegrationConfig("clockify")),
   saveConfig: adminProcedure
     .input(z.object({ apiKey: z.string() }))
     .mutation(({ input }) => upsertIntegrationConfig("clockify", { apiKey: input.apiKey })),
+
+  // Edición manual de jornadas por trabajador en un proyecto histórico
+  getProjectWorkers: protectedProcedure
+    .input(z.object({ projectHistoryId: z.number() }))
+    .query(({ input }) => getProjectHistoryWorkers(input.projectHistoryId)),
+
+  upsertProjectWorker: adminProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      projectHistoryId: z.number(),
+      workerName: z.string().min(1),
+      department: z.enum(["seo", "design", "development", "management", "various", "external"]),
+      hoursFromClockify: z.string().optional(),
+      hoursAdjustment: z.string().optional(),
+      totalDays: z.string(),
+      isManual: z.boolean().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      await upsertProjectHistoryWorker(input as any);
+      await recalcProjectHistoryTotals(input.projectHistoryId);
+      const rows = await getAllProjectHistory();
+      const row = rows.find((r: any) => r.id === input.projectHistoryId);
+      if (row?.projectTypeId) await recalcProjectTypeAverages(row.projectTypeId);
+      return { success: true };
+    }),
+
+  deleteProjectWorker: adminProcedure
+    .input(z.object({ id: z.number(), projectHistoryId: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteProjectHistoryWorker(input.id);
+      await recalcProjectHistoryTotals(input.projectHistoryId);
+      const rows = await getAllProjectHistory();
+      const row = rows.find((r: any) => r.id === input.projectHistoryId);
+      if (row?.projectTypeId) await recalcProjectTypeAverages(row.projectTypeId);
+      return { success: true };
+    }),
 
   // Panel de datos: horas por proyecto y trabajador, medias por trabajador
   getProjectHours: protectedProcedure

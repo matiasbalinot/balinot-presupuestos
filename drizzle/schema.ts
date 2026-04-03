@@ -180,6 +180,26 @@ export const projectHistory = mysqlTable("project_history", {
 export type ProjectHistory = typeof projectHistory.$inferSelect;
 export type InsertProjectHistory = typeof projectHistory.$inferInsert;
 
+// ─── Project History Workers ──────────────────────────────────────────────────
+// Jornadas reales por trabajador por proyecto histórico (7h = 1 jornada)
+export const projectHistoryWorkers = mysqlTable("project_history_workers", {
+  id: int("id").autoincrement().primaryKey(),
+  projectHistoryId: int("projectHistoryId").notNull(),
+  workerName: varchar("workerName", { length: 100 }).notNull(),
+  department: mysqlEnum("department", ["seo", "design", "development", "management", "various", "external"]).notNull(),
+  clockifyUserId: varchar("clockifyUserId", { length: 100 }),
+  hoursFromClockify: decimal("hoursFromClockify", { precision: 8, scale: 2 }).default("0"),
+  hoursAdjustment: decimal("hoursAdjustment", { precision: 8, scale: 2 }).default("0"),
+  totalDays: decimal("totalDays", { precision: 6, scale: 2 }).default("0"),
+  isManual: boolean("isManual").default(false).notNull(),
+  notes: varchar("notes", { length: 300 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectHistoryWorker = typeof projectHistoryWorkers.$inferSelect;
+export type InsertProjectHistoryWorker = typeof projectHistoryWorkers.$inferInsert;
+
 // ─── Integration Config ───────────────────────────────────────────────────────
 export const integrationConfig = mysqlTable("integration_config", {
   id: int("id").autoincrement().primaryKey(),

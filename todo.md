@@ -210,3 +210,18 @@
 ## Mejoras v3.7
 - [x] Dashboard tabla presupuestos recientes: eliminar columnas Subtotal e IVA, mantener Total, añadir Margen (solo porcentaje numérico con color)
 - [x] /presupuestos: columna Margen solo con número (sin etiqueta de texto "Bajo margen"/"Ajustado")
+
+## Integración Clockify v4.0
+- [ ] syncProjects: detectar tipología de proyecto por nombre en Clockify (web corporativa a código, web corporativa con maquetador, app web, landing page)
+- [ ] syncProjects: importar horas reales al histórico asociadas a la tipología detectada
+- [ ] syncProjects: recalcular medias de días por departamento para cada tipología tras la importación
+- [ ] Asegurar que las tipologías de proyecto en la app coinciden con las 4 tipologías de Clockify
+- [ ] BudgetEditor: al seleccionar tipología, pre-rellenar días estimados con las medias reales de Clockify
+
+## Integración Clockify v4.1 (ampliación)
+- [x] Backend: syncProjects convierte horas a jornadas (7h = 1 jornada) y guarda por trabajador en project_history_workers
+- [x] Backend: procedimientos para editar/añadir/eliminar jornadas de trabajador en un proyecto histórico
+- [x] Frontend: UI en /histórico para ver y editar jornadas por trabajador de cada proyecto (expandible por fila)
+- [x] Frontend: permitir añadir trabajadores externos no fichados en Clockify (departamento "Externo")
+## Bugs v4.1
+- [x] Bug: suma de coste de personal en el editor de presupuestos es incorrecta — corregido: al cargar un presupuesto existente, las líneas ahora pasan por calcLine() para recalcular lineCost/lineSale desde estimatedDays×costPerDay, evitando inconsistencias con valores guardados en BD

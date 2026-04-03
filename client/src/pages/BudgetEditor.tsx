@@ -224,7 +224,7 @@ export default function BudgetEditor() {
       setCommissionPct((existingBudget as any).commissionPct ?? "10");
       setNotes(existingBudget.notes ?? "");
       setInternalNotes(existingBudget.internalNotes ?? "");
-      const existingLines: BudgetLine[] = ((existingBudget as any).lines ?? []).map((l: any) => ({
+      const existingLines: BudgetLine[] = ((existingBudget as any).lines ?? []).map((l: any) => calcLine({
         ...l,
         tempId: uid(),
         estimatedDays: String(l.estimatedDays ?? "0"),

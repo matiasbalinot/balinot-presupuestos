@@ -131,7 +131,7 @@ export default function ConfigPage() {
             <Button
               variant="outline"
               className="gap-2"
-              onClick={() => syncClockifyMutation.mutate({ projectTypeId: undefined })}
+              onClick={() => syncClockifyMutation.mutate({})}
               disabled={syncClockifyMutation.isPending || !isAdmin}
             >
               {syncClockifyMutation.isPending ? (

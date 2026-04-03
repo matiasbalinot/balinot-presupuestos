@@ -7,6 +7,7 @@ import {
   InsertCommission,
   InsertFixedCost,
   InsertProjectHistory,
+  InsertProjectHistoryWorker,
   InsertProjectType,
   InsertUser,
   InsertWorker,
@@ -16,6 +17,7 @@ import {
   fixedCosts,
   integrationConfig,
   projectHistory,
+  projectHistoryWorkers,
   projectTypes,
   users,
   workers,
@@ -332,7 +334,112 @@ export async function recalcProjectTypeAverages(projectTypeId: number) {
     .where(eq(projectTypes.id, projectTypeId));
 }
 
-// ─── Integration Config ───────────────────────────────────────────────────────
+//// ─── Project History Workers ──────────────────────────────────────────────────
+
+export async function getProjectHistoryWorkers(projectHistoryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(projectHistoryWorkers)
+    .where(eq(projectHistoryWorkers.projectHistoryId, projectHistoryId))
+    .orderBy(projectHistoryWorkers.department, projectHistoryWorkers.workerName);
+}
+
+/** Upsert de jornadas de un trabajador en un proyecto histórico.
+ *  Si ya existe (mismo projectHistoryId + workerName), actualiza; si no, inserta.
+ *  totalDays se calcula automáticamente: (hoursFromClockify + hoursAdjustment) / 7
+ */
+export async function upsertProjectHistoryWorker(
+  data: InsertProjectHistoryWorker & { id?: number }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  const HOURS_PER_DAY = 7;
+  const hoursFrom = Number(data.hoursFromClockify ?? 0);
+  const hoursAdj = Number(data.hoursAdjustment ?? 0);
+  const totalDays = (hoursFrom + hoursAdj) / HOURS_PER_DAY;
+  const payload = { ...data, totalDays: String(totalDays.toFixed(2)) };
+
+  if (data.id) {
+    const { id, ...rest } = payload;
+    await db.update(projectHistoryWorkers).set(rest).where(eq(projectHistoryWorkers.id, data.id));
+    return data.id;
+  }
+
+  // Check for existing row by projectHistoryId + workerName
+  const existing = await db
+    .select()
+    .from(projectHistoryWorkers)
+    .where(
+      and(
+        eq(projectHistoryWorkers.projectHistoryId, data.projectHistoryId),
+        eq(projectHistoryWorkers.workerName, data.workerName)
+      )
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(projectHistoryWorkers)
+      .set(payload)
+      .where(eq(projectHistoryWorkers.id, existing[0].id));
+    return existing[0].id;
+  }
+
+  const result = await db.insert(projectHistoryWorkers).values(payload as any);
+  return Number((result as any)[0]?.insertId ?? 0);
+}
+
+export async function clearProjectHistoryWorkers(projectHistoryId: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Solo borra los workers que vinieron de Clockify (isManual = false) para preservar ajustes manuales
+  await db.delete(projectHistoryWorkers)
+    .where(and(eq(projectHistoryWorkers.projectHistoryId, projectHistoryId), eq(projectHistoryWorkers.isManual, false)));
+}
+export async function deleteProjectHistoryWorker(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(projectHistoryWorkers).where(eq(projectHistoryWorkers.id, id));
+}
+
+/** Recalcula las jornadas agregadas del proyecto histórico a partir de sus workers */
+export async function recalcProjectHistoryTotals(projectHistoryId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const wRows = await db
+    .select()
+    .from(projectHistoryWorkers)
+    .where(eq(projectHistoryWorkers.projectHistoryId, projectHistoryId));
+
+  let seoDays = 0, designDays = 0, devDays = 0, variousDays = 0;
+  for (const w of wRows) {
+    const days = Number(w.totalDays ?? 0);
+    if (w.department === "seo") seoDays += days;
+    else if (w.department === "design") designDays += days;
+    else if (w.department === "development") devDays += days;
+    else variousDays += days;
+  }
+  const totalDays = seoDays + designDays + devDays + variousDays;
+  const efficiency: "efficient" | "correct" | "excess" =
+    totalDays < 2.5 ? "efficient" : totalDays < 5 ? "correct" : "excess";
+
+  await db
+    .update(projectHistory)
+    .set({
+      realSeoDays: String(seoDays.toFixed(2)),
+      realDesignDays: String(designDays.toFixed(2)),
+      realDevDays: String(devDays.toFixed(2)),
+      realVariousDays: String(variousDays.toFixed(2)),
+      realTotalDays: String(totalDays.toFixed(2)),
+      efficiencyStatus: efficiency,
+    })
+    .where(eq(projectHistory.id, projectHistoryId));
+}
+
+// ─── Integration Config ──────────────────────────────────────────────────
 export async function getIntegrationConfig(service: "holded" | "clockify") {
   const db = await getDb();
   if (!db) return null;
