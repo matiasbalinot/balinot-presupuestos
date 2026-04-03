@@ -239,3 +239,8 @@
 ## Pendiente v4.4
 - [x] Verificar que el dropdown de tipología en /histórico no muestra tipologías legacy — la BD ya solo tiene las 5 correctas; el dropdown usa projectTypes.list que devuelve lo que hay en BD
 - [x] Añadir invalidación automática de caché tRPC en el frontend tras syncProjects — añadido refetchProjectTypes() en onSuccess de syncMutation y updateTypeMutation
+
+## Bugs v4.5
+- [x] PDF cliente: debe mostrar datos del servicio (nombre, descripción, precio), no el desglose de jornadas por trabajador — corregido: si hay holdedServiceName, se muestra una sola línea de servicio sin desglose interno
+- [x] Medias de "Varios" no se aplican al seleccionar tipología — corregido: añadido bloque variousWorkers en handleProjectTypeChange
+- [x] Coste personal incorrecto: ahora es solo subtotalCost (coste directo de trabajadores), sin incluir la gestión

@@ -52,6 +52,9 @@ interface PdfBudget {
   netMarginPct: string | number;
   fixedCostsAmount: string | number;
   managementPct: string | number;
+  holdedServiceName?: string | null;
+  holdedServiceDesc?: string | null;
+  holdedServicePrice?: string | number | null;
   lines: Array<{
     area: string;
     description: string;
@@ -75,14 +78,24 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
   const mgmtPct = parseFloat(String(budget.managementPct ?? 40));
   const mgmtSale = subtotalSale * (mgmtPct / 100);
 
-  // Group lines by area
+  // Para versión cliente: si hay servicio Holded, mostrar solo el servicio (sin desglose interno)
+  const hasService = version === "client" && budget.holdedServiceName;
+  const clientServiceHtml = hasService ? `
+    <tr>
+      <td style="padding: 12px; font-size: 13px; color: #323750; font-weight: 500;">${budget.holdedServiceName}</td>
+      <td colspan="2" style="padding: 12px; font-size: 12px; color: #707385;">${budget.holdedServiceDesc ?? ""}</td>
+      <td style="padding: 12px; font-size: 13px; font-weight: 700; color: #080e2c; text-align: right;">${fmtCurrency(budget.totalSale)}</td>
+    </tr>
+  ` : "";
+
+  // Group lines by area (para versión interna o si no hay servicio)
   const areaOrder = ["seo", "design", "development", "branding", "various"];
   const linesByArea: Record<string, typeof workLines> = {};
   for (const area of areaOrder) {
     linesByArea[area] = workLines.filter(l => l.area === area);
   }
 
-  const linesHtml = areaOrder.map(area => {
+  const linesHtml = hasService ? clientServiceHtml : areaOrder.map(area => {
     const areaLines = linesByArea[area];
     if (!areaLines || areaLines.length === 0) return "";
     const areaTotal = areaLines.reduce((s, l) => s + parseFloat(String(l.lineSale ?? 0)), 0);
@@ -227,8 +240,8 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
         <thead>
           <tr style="background: #080e2c;">
             <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Descripción</th>
-            <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Jornadas</th>
-            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Tarifa</th>
+            ${hasService ? `` : `<th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Jornadas</th>
+            <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Tarifa</th>`}
             <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Total</th>
           </tr>
         </thead>
@@ -242,6 +255,7 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
     <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
       <div style="min-width: 280px;">
         <table style="font-size: 13px;">
+          ${hasService ? `` : `
           <tr>
             <td style="padding: 4px 12px; color: #707385;">Subtotal trabajo</td>
             <td style="padding: 4px 12px; text-align: right; font-weight: 500;">${fmtCurrency(subtotalSale)}</td>
@@ -250,12 +264,13 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
             <td style="padding: 4px 12px; color: #707385;">Gestión y coordinación (${mgmtPct}%)</td>
             <td style="padding: 4px 12px; text-align: right; font-weight: 500;">${fmtCurrency(mgmtSale)}</td>
           </tr>
-          ${(budget.commissions ?? []).map(c => `
+          ${(budget.commissions ?? []).map((c: any) => `
             <tr>
               <td style="padding: 4px 12px; color: #707385;">${c.name}</td>
               <td style="padding: 4px 12px; text-align: right; font-weight: 500;">${fmtCurrency(c.amount)}</td>
             </tr>
           `).join("")}
+          `}
           <tr style="border-top: 2px solid #080e2c;">
             <td style="padding: 10px 12px; font-weight: 700; font-size: 15px; color: #080e2c;">TOTAL</td>
             <td style="padding: 10px 12px; text-align: right; font-weight: 700; font-size: 18px; color: #080e2c;">${fmtCurrency(budget.totalSale)}</td>

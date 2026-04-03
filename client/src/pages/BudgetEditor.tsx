@@ -305,6 +305,19 @@ export default function BudgetEditor() {
       }));
     }
 
+    // Various workers — solo si hay media histórica > 0
+    const variousWorkers = workers.filter((w: any) => w.department === "various" && !w.isExternal);
+    if (parseFloat(type.avgVariousDays) > 0 && variousWorkers.length > 0) {
+      const w = variousWorkers[0];
+      newLines.push(calcLine({
+        tempId: uid(), workerId: w.id, area: "various",
+        description: `Varios — ${w.name}`,
+        estimatedDays: fmt(parseFloat(type.avgVariousDays)),
+        costPerDay: String(w.costPerDay), salePricePerDay: String(w.salePricePerDay),
+        lineCost: "0", lineSale: "0", isFixedPrice: false, fixedPrice: "0", sortOrder: newLines.length,
+      }));
+    }
+
     if (newLines.length > 0) setLines(newLines);
     toast.info(`Jornadas sugeridas basadas en ${type.sampleCount ?? 0} proyectos similares`);
   };
@@ -399,8 +412,9 @@ export default function BudgetEditor() {
     const netMargin = totalSale - totalCost;
     const netMarginPct = totalSale > 0 ? (netMargin / totalSale) * 100 : 0;
 
-    // Coste personal = coste del trabajo + coste de gestión
-    const costPersonal = withMgmtCost;
+    // Coste personal = solo coste directo de los trabajadores (sin gestión)
+    // La gestión (40%) es margen para cubrir gastos de dirección, no un coste de personal
+    const costPersonal = subtotalCost;
     // Coste comercial = comisión
     const costComercial = commissionAmount;
     // Coste gastos fijos

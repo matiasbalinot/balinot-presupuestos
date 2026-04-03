@@ -94,6 +94,9 @@ export function registerPdfRoutes(app: Express) {
           netMarginPct: budget.netMarginPct ?? 0,
           fixedCostsAmount: budget.fixedCostsAmount ?? 0,
           managementPct: budget.managementPct ?? "40",
+          holdedServiceName: (budget as any).holdedServiceName ?? null,
+          holdedServiceDesc: (budget as any).holdedServiceDesc ?? null,
+          holdedServicePrice: (budget as any).holdedServicePrice ?? null,
           lines: lines.map(l => ({
             ...l,
             estimatedDays: l.estimatedDays ?? "0",
