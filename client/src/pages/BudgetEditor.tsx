@@ -98,7 +98,6 @@ export default function BudgetEditor() {
   const { data: workers = [] } = trpc.workers.listActive.useQuery();
   const { data: projectTypes = [] } = trpc.projectTypes.list.useQuery();
   const { data: fixedCosts = [] } = trpc.fixedCosts.list.useQuery();
-  const { data: commissions = [] } = trpc.commissions.list.useQuery();
   const { data: existingBudget } = trpc.budgets.get.useQuery(
     { id: budgetId! },
     { enabled: !!budgetId }
@@ -110,6 +109,8 @@ export default function BudgetEditor() {
   const [clientEmail, setClientEmail] = useState("");
   const [projectTypeId, setProjectTypeId] = useState<number | null>(null);
   const [managementPct, setManagementPct] = useState("40");
+  const [commissionType, setCommissionType] = useState<"none" | "luis" | "commercial">("none");
+  const [commissionPct, setCommissionPct] = useState("10");
   const [notes, setNotes] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
   const [lines, setLines] = useState<BudgetLine[]>([]);
@@ -127,6 +128,8 @@ export default function BudgetEditor() {
       setClientEmail(existingBudget.clientEmail ?? "");
       setProjectTypeId(existingBudget.projectTypeId ?? null);
       setManagementPct(existingBudget.managementPct ?? "40");
+      setCommissionType((existingBudget as any).commissionType ?? "none");
+      setCommissionPct((existingBudget as any).commissionPct ?? "10");
       setNotes(existingBudget.notes ?? "");
       setInternalNotes(existingBudget.internalNotes ?? "");
       const existingLines: BudgetLine[] = ((existingBudget as any).lines ?? []).map((l: any) => ({
@@ -270,22 +273,19 @@ export default function BudgetEditor() {
     const withMgmtCost = subtotalCost + managementCost;
     const withMgmtSale = subtotalSale + managementSale;
 
-    // Commissions
-    let totalCommissionSale = 0;
-    for (const comm of commissions as any[]) {
-      if (!comm.isActive) continue;
-      const base = comm.appliesTo === "with_management" ? withMgmtSale : subtotalSale;
-      totalCommissionSale += base * (parseFloat(comm.percentage) / 100);
-    }
+    // Commission (per-budget: none / luis / commercial)
+    const commPct = parseFloat(commissionPct) / 100;
+    const commissionAmount = commissionType !== "none" ? withMgmtSale * commPct : 0;
 
     // Fixed costs allocation
     const totalFixedMonthly = (fixedCosts as any[]).reduce((s: number, fc: any) => {
       return s + parseFloat(fc.monthlyAmount) * (parseFloat(fc.projectAllocationPct) / 100);
     }, 0);
 
-    const totalSale = withMgmtSale + totalCommissionSale;
-    const totalCost = withMgmtCost + totalFixedMonthly;
-    const grossMargin = totalSale - withMgmtCost;
+    const totalSale = withMgmtSale + commissionAmount;
+    // Commission is a cost (paid to the commercial), so it reduces the margin
+    const totalCost = withMgmtCost + commissionAmount + totalFixedMonthly;
+    const grossMargin = totalSale - withMgmtCost - commissionAmount;
     const grossMarginPct = totalSale > 0 ? (grossMargin / totalSale) * 100 : 0;
     const netMargin = totalSale - totalCost;
     const netMarginPct = totalSale > 0 ? (netMargin / totalSale) * 100 : 0;
@@ -294,12 +294,12 @@ export default function BudgetEditor() {
       subtotalCost, subtotalSale,
       managementCost, managementSale,
       withMgmtCost, withMgmtSale,
-      totalCommissionSale, totalFixedMonthly,
+      commissionAmount, totalFixedMonthly,
       totalCost, totalSale,
       grossMargin, grossMarginPct,
       netMargin, netMarginPct,
     };
-  }, [lines, managementPct, commissions, fixedCosts]);
+  }, [lines, managementPct, commissionType, commissionPct, fixedCosts]);
 
   // Mutations
   const saveMutation = trpc.budgets.save.useMutation();
@@ -317,6 +317,9 @@ export default function BudgetEditor() {
         projectName, clientName, clientEmail,
         projectTypeId,
         managementPct,
+        commissionType,
+        commissionPct,
+        commissionAmount: fmt(totals.commissionAmount),
         status: status ?? "draft",
         totalCost: fmt(totals.totalCost),
         totalSale: fmt(totals.totalSale),
@@ -513,6 +516,36 @@ export default function BudgetEditor() {
                     <span className="text-xs text-muted-foreground">(habitualmente 40%)</span>
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Comisión comercial</Label>
+                  <div className="flex items-center gap-2">
+                    <Select value={commissionType} onValueChange={v => setCommissionType(v as any)}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sin comisión</SelectItem>
+                        <SelectItem value="luis">Luis</SelectItem>
+                        <SelectItem value="commercial">Comercial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {commissionType !== "none" && (
+                      <>
+                        <Input
+                          type="number"
+                          value={commissionPct}
+                          onChange={e => setCommissionPct(e.target.value)}
+                          className="w-20"
+                          min="0" max="100" step="1"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                        <span className="text-xs text-muted-foreground font-medium text-amber-600">
+                          {fmtCurrency(totals.commissionAmount)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -700,17 +733,14 @@ export default function BudgetEditor() {
                   <span className="text-muted-foreground">Gestión ({managementPct}%)</span>
                   <span className="font-medium">{fmtCurrency(totals.managementSale)}</span>
                 </div>
-                {(commissions as any[]).filter((c: any) => c.isActive).map((c: any) => (
-                  <div key={c.id} className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground">{c.name} ({c.percentage}%)</span>
-                    <span className="font-medium text-amber-600">
-                      {fmtCurrency(
-                        (c.appliesTo === "with_management" ? totals.withMgmtSale : totals.subtotalSale) *
-                        (parseFloat(c.percentage) / 100)
-                      )}
+                {commissionType !== "none" && (
+                  <div className="flex justify-between py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">
+                      Comisión {commissionType === "luis" ? "Luis" : "Comercial"} ({commissionPct}%)
                     </span>
+                    <span className="font-medium text-amber-600">{fmtCurrency(totals.commissionAmount)}</span>
                   </div>
-                ))}
+                )}
                 <div className="flex justify-between py-2 border-b-2 border-border">
                   <span className="font-semibold text-foreground">Total venta</span>
                   <span className="font-bold text-lg">{fmtCurrency(totals.totalSale)}</span>

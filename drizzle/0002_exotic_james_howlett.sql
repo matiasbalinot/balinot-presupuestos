@@ -1,0 +1,2 @@
+ALTER TABLE `workers` MODIFY COLUMN `department` enum('seo','design','development','management','various','external') NOT NULL;--> statement-breakpoint
+ALTER TABLE `workers` ADD `isExternal` boolean DEFAULT false NOT NULL;

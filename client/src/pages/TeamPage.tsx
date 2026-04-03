@@ -17,6 +17,7 @@ const DEPT_LABELS: Record<string, string> = {
   development: "Desarrollo",
   management: "Gestión",
   various: "Varios",
+  external: "Externos",
 };
 
 const DEPT_COLORS: Record<string, string> = {
@@ -25,6 +26,7 @@ const DEPT_COLORS: Record<string, string> = {
   development: "bg-blue-50 text-blue-700 border-blue-200",
   management: "bg-gray-50 text-gray-600 border-gray-200",
   various: "bg-orange-50 text-orange-700 border-orange-200",
+  external: "bg-yellow-50 text-yellow-700 border-yellow-200",
 };
 
 function fmtCurrency(n: number | string): string {
@@ -193,7 +195,7 @@ export default function TeamPage() {
   const [workerDialog, setWorkerDialog] = useState<any>(null);
   const [commDialog, setCommDialog] = useState<any>(null);
 
-  const depts = ["seo", "design", "development", "various", "management"];
+  const depts = ["seo", "design", "development", "various", "management", "external"];
 
   return (
     <AppLayout>
@@ -242,7 +244,12 @@ export default function TeamPage() {
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/60"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">{w.name}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {w.name}
+                            {w.isExternal && (
+                              <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">Externo</span>
+                            )}
+                          </p>
                           {w.clockifyUserEmail && (
                             <p className="text-xs text-muted-foreground">{w.clockifyUserEmail}</p>
                           )}

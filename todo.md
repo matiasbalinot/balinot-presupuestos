@@ -125,3 +125,12 @@
 - [x] Backend: endpoint clockify.getProjectHours para obtener entradas de tiempo agrupadas por proyecto y trabajador
 - [x] Backend: endpoint holded.getExpenses para obtener gastos del mes actual desde Holded
 - [x] Añadir enlace "Datos" en el sidebar de navegación
+
+## Equipo y tarifas v2.0
+- [x] Actualizar datos de todos los trabajadores en BD con tarifas correctas
+- [x] Añadir trabajador externo Alfonso Cala (180€/j coste, 350€/j venta)
+- [x] Verificar que MWM está como externo con 270€/j coste y 405€/j venta
+- [x] Eliminar "Comisión Balinot" del sistema
+- [x] Ajustar comisiones: opciones "Luis" y "Comercial" (por defecto 10%, editable por presupuesto)
+- [x] En calculadora: selector de comisión (ninguna / Luis / Comercial) con % editable
+- [x] La comisión siempre se suma como gasto al coste total del presupuesto

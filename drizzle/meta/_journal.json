@@ -15,6 +15,20 @@
       "when": 1774986669673,
       "tag": "0001_woozy_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775240085469,
+      "tag": "0002_exotic_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1775240167481,
+      "tag": "0003_mighty_toxin",
+      "breakpoints": true
     }
   ]
 }
