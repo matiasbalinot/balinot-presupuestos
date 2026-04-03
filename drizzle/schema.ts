@@ -123,6 +123,8 @@ export const budgets = mysqlTable("budgets", {
   internalNotes: text("internalNotes"),
   holdedContactId: varchar("holdedContactId", { length: 100 }),
   holdedDocumentId: varchar("holdedDocumentId", { length: 100 }),
+  taxKey: varchar("taxKey", { length: 50 }).default("s_iva_21"),
+  taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("21"),
   holdedServiceId: varchar("holdedServiceId", { length: 100 }),
   holdedServiceName: varchar("holdedServiceName", { length: 300 }),
   holdedServiceDesc: text("holdedServiceDesc"),

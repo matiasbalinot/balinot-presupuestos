@@ -182,6 +182,8 @@ export default function BudgetEditor() {
   const [holdedServiceName, setHoldedServiceName] = useState("");
   const [holdedServiceDesc, setHoldedServiceDesc] = useState("");
   const [holdedServicePrice, setHoldedServicePrice] = useState("");
+  const [taxKey, setTaxKey] = useState("s_iva_21");
+  const [taxRate, setTaxRate] = useState("21");
 
   // Load existing budget
   useEffect(() => {
@@ -203,6 +205,8 @@ export default function BudgetEditor() {
       setHoldedServiceName((existingBudget as any).holdedServiceName ?? "");
       setHoldedServiceDesc((existingBudget as any).holdedServiceDesc ?? "");
       setHoldedServicePrice((existingBudget as any).holdedServicePrice ?? "");
+      setTaxKey((existingBudget as any).taxKey ?? "s_iva_21");
+      setTaxRate((existingBudget as any).taxRate ?? "21");
       setProjectTypeId(existingBudget.projectTypeId ?? null);
       setManagementPct(existingBudget.managementPct ?? "40");
       setCommissionType((existingBudget as any).commissionType ?? "none");
@@ -471,6 +475,8 @@ export default function BudgetEditor() {
         netMarginPct: fmt(totals.netMarginPct),
         notes, internalNotes,
         holdedContactId: resolvedHoldedContactId || undefined,
+        taxKey: taxKey || undefined,
+        taxRate: taxRate || undefined,
         holdedServiceId: holdedServiceId || undefined,
         holdedServiceName: holdedServiceName || undefined,
         holdedServiceDesc: holdedServiceDesc || undefined,
@@ -821,6 +827,39 @@ export default function BudgetEditor() {
                     )}
                   </div>
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tipo de impuesto</Label>
+                  <Select value={taxKey} onValueChange={v => {
+                    setTaxKey(v);
+                    const rates: Record<string, string> = {
+                      s_iva_21: "21", s_iva_10: "10", s_iva_75: "7.5", s_iva_5: "5",
+                      s_iva_4: "4", s_iva_2: "2", s_iva_0: "0",
+                      s_iva_exento: "0", s_iva_nosujeto: "0",
+                      s_iva_intrab: "0", s_iva_intras: "0",
+                      s_iva_export: "0", s_iva_invsuj: "0",
+                    };
+                    setTaxRate(rates[v] ?? "21");
+                  }}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="s_iva_21">IVA 21%</SelectItem>
+                      <SelectItem value="s_iva_10">IVA 10%</SelectItem>
+                      <SelectItem value="s_iva_75">IVA 7,5%</SelectItem>
+                      <SelectItem value="s_iva_5">IVA 5%</SelectItem>
+                      <SelectItem value="s_iva_4">IVA 4%</SelectItem>
+                      <SelectItem value="s_iva_2">IVA 2%</SelectItem>
+                      <SelectItem value="s_iva_0">IVA 0%</SelectItem>
+                      <SelectItem value="s_iva_exento">Exenta</SelectItem>
+                      <SelectItem value="s_iva_nosujeto">No sujeto</SelectItem>
+                      <SelectItem value="s_iva_intrab">Intracomunitario Bienes</SelectItem>
+                      <SelectItem value="s_iva_intras">Intracomunitario Servicio</SelectItem>
+                      <SelectItem value="s_iva_export">Exportaci\u00f3n</SelectItem>
+                      <SelectItem value="s_iva_invsuj">Inv. Suj. Pasivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
 
@@ -1149,9 +1188,17 @@ export default function BudgetEditor() {
                     <span className="font-medium">{fmtCurrency(totals.commissionAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between py-2 bg-muted/30 px-2 rounded-md mt-1 mb-4">
-                  <span className="font-semibold text-foreground">Total venta</span>
+                <div className="flex justify-between py-2 bg-muted/30 px-2 rounded-md mt-1">
+                  <span className="font-semibold text-foreground">Total venta (base imponible)</span>
                   <span className="font-bold text-lg">{fmtCurrency(totals.totalSale)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/40">
+                  <span className="text-muted-foreground">{taxKey === "s_iva_exento" ? "Exenta" : taxKey === "s_iva_nosujeto" ? "No sujeto" : `IVA ${taxRate}%`}</span>
+                  <span className="font-medium">{fmtCurrency(totals.totalSale * parseFloat(taxRate) / 100)}</span>
+                </div>
+                <div className="flex justify-between py-2 bg-primary/10 px-2 rounded-md mt-1 mb-4">
+                  <span className="font-semibold text-foreground">Total con impuestos</span>
+                  <span className="font-bold text-lg">{fmtCurrency(totals.totalSale * (1 + parseFloat(taxRate) / 100))}</span>
                 </div>
 
                 {/* ── GASTOS ── */}

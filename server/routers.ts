@@ -168,6 +168,8 @@ const budgetsRouter = router({
         notes: z.string().optional(),
         internalNotes: z.string().optional(),
         holdedContactId: z.string().optional(),
+        taxKey: z.string().optional(),
+        taxRate: z.string().optional(),
         holdedServiceId: z.string().optional(),
         holdedServiceName: z.string().optional(),
         holdedServiceDesc: z.string().optional(),
@@ -391,13 +393,16 @@ const holdedRouter = router({
       const totalSale = parseFloat(String(budget.totalSale ?? 0));
       const serviceId = budget.holdedServiceId;
 
+      const taxRate = parseFloat(String(budget.taxRate ?? 21));
+      const taxKey = budget.taxKey ?? "s_iva_21";
+
       const item: any = {
         name: serviceName,
         desc: serviceDesc,
         units: 1,
         subtotal: totalSale,
-        tax: 21,
-        taxes: ["s_iva_21"],
+        tax: taxRate,
+        taxes: [taxKey],
       };
       if (serviceId) item.serviceId = serviceId;
 

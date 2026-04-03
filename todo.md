@@ -183,3 +183,7 @@
 
 ## Correcciones v3.1
 - [x] Bug: el estimate enviado a Holded no incluye el precio — corregido: spread ternario roto, añadido subtotal y taxes array
+
+## Mejoras v3.2
+- [x] Selector de tipo de impuesto en la calculadora (IVA 21% por defecto, configurable)
+- [x] Guardar tipo de impuesto en BD y usarlo en resumen económico y envío a Holded
