@@ -33,7 +33,6 @@ await db.insert(projectTypes).values([
   { name: "Tienda online", slug: "tienda-online", avgSeoHours: "14.00", avgDesignHours: "45.00", avgDevHours: "80.00", avgVariousHours: "8.00", sampleCount: 8 },
   { name: "Landing page", slug: "landing-page", avgSeoHours: "4.00", avgDesignHours: "12.00", avgDevHours: "10.00", avgVariousHours: "2.00", sampleCount: 10 },
   { name: "App web", slug: "app-web", avgSeoHours: "8.00", avgDesignHours: "35.00", avgDevHours: "120.00", avgVariousHours: "5.00", sampleCount: 4 },
-  { name: "Branding", slug: "branding", avgSeoHours: "2.00", avgDesignHours: "40.00", avgDevHours: "5.00", avgVariousHours: "3.00", sampleCount: 6 },
 ]).onDuplicateKeyUpdate({ set: { name: projectTypes.name } }).catch(() => {});
 
 console.log("✓ Project types seeded");

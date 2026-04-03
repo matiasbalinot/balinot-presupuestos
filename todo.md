@@ -146,3 +146,6 @@
 ## Correcciones v2.3
 - [x] Branding: eliminar selector de trabajador — es un servicio a precio cerrado, no por trabajador
 - [x] Branding: columnas en orden Coste primero, Venta después
+
+## Correcciones v2.4
+- [x] Eliminar "branding" de las tipologías de proyecto (project_types) en BD y frontend
