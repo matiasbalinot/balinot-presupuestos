@@ -203,3 +203,6 @@
 ## Correcciones v3.5
 - [x] Bug: filtrado por fechas en dashboard no funciona — corregido usando UNIX_TIMESTAMP() en las queries SQL para evitar el problema de timezone de mysql2 (servidor UTC-4 vs BD UTC)
 - [x] Dashboard: mostrar nombre del presupuesto más reciente y fecha de último guardado en cada fila del panel de estado
+
+## Mejoras v3.6
+- [x] Página /presupuestos: añadir columnas Subtotal e IVA a la tabla (junto a Total, Margen, Estado)

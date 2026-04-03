@@ -162,19 +162,26 @@ export default function BudgetList() {
         ) : (
           <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_160px_120px_100px_100px_120px] gap-4 px-4 py-3 border-b border-border bg-muted/30">
+            <div className="grid grid-cols-[1fr_150px_110px_85px_85px_95px_90px_110px] gap-3 px-4 py-3 border-b border-border bg-muted/30">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Proyecto</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cliente</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fecha</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Subtotal</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">IVA</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Total</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Margen</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Acciones</span>
             </div>
 
-            {filtered.map((budget: any, idx: number) => (
+            {filtered.map((budget: any, idx: number) => {
+              const subtotal = parseFloat(String(budget.totalSale ?? 0));
+              const taxRate = parseFloat(String(budget.taxRate ?? 21));
+              const ivaAmount = subtotal * (taxRate / 100);
+              const total = subtotal + ivaAmount;
+              return (
               <div
                 key={budget.id}
-                className={`grid grid-cols-[1fr_160px_120px_100px_100px_120px] gap-4 px-4 py-3.5 items-center hover:bg-muted/20 transition-colors ${
+                className={`grid grid-cols-[1fr_150px_110px_85px_85px_95px_90px_110px] gap-3 px-4 py-3.5 items-center hover:bg-muted/20 transition-colors ${
                   idx < filtered.length - 1 ? "border-b border-border/60" : ""
                 }`}
               >
@@ -193,13 +200,19 @@ export default function BudgetList() {
                 {/* Date */}
                 <span className="text-sm text-muted-foreground">{formatDate(budget.createdAt)}</span>
 
+                {/* Subtotal */}
+                <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(subtotal)}</span>
+
+                {/* IVA */}
+                <span className="text-sm text-muted-foreground text-right tabular-nums">{formatCurrency(ivaAmount)}</span>
+
                 {/* Total */}
-                <span className="text-sm font-semibold text-foreground text-right">{formatCurrency(budget.totalSale)}</span>
+                <span className="text-sm font-semibold text-foreground text-right tabular-nums">{formatCurrency(total)}</span>
 
                 {/* Margin */}
                 <div className="flex justify-center">
                   {parseFloat(budget.netMarginPct) > 0 ? (
-                    <MarginBadge pct={parseFloat(budget.netMarginPct)} showLabel={false} />
+                    <MarginBadge pct={parseFloat(budget.netMarginPct)} showLabel={true} />
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
@@ -262,7 +275,8 @@ export default function BudgetList() {
                   </DropdownMenu>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
