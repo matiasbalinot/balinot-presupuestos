@@ -373,11 +373,19 @@ export default function BudgetEditor() {
     const netMargin = totalSale - totalCost;
     const netMarginPct = totalSale > 0 ? (netMargin / totalSale) * 100 : 0;
 
+    // Coste personal = coste del trabajo + coste de gestión
+    const costPersonal = withMgmtCost;
+    // Coste comercial = comisión
+    const costComercial = commissionAmount;
+    // Coste gastos fijos
+    const costGastosFijos = totalFixedMonthly;
+
     return {
       subtotalCost, subtotalSale,
       managementCost, managementSale,
       withMgmtCost, withMgmtSale,
       commissionAmount, totalFixedMonthly,
+      costPersonal, costComercial, costGastosFijos,
       totalCost, totalSale,
       grossMargin, grossMarginPct,
       netMargin, netMarginPct,
@@ -986,52 +994,75 @@ export default function BudgetEditor() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">Resumen económico</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-border/50">
+              <CardContent className="space-y-0 text-sm">
+                {/* ── VENTA ── */}
+                <div className="mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Venta</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/40">
                   <span className="text-muted-foreground">Subtotal trabajo</span>
                   <span className="font-medium">{fmtCurrency(totals.subtotalSale)}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-border/50">
+                <div className="flex justify-between py-1.5 border-b border-border/40">
                   <span className="text-muted-foreground">Gestión ({managementPct}%)</span>
                   <span className="font-medium">{fmtCurrency(totals.managementSale)}</span>
                 </div>
                 {commissionType !== "none" && (
-                  <div className="flex justify-between py-1 border-b border-border/50">
+                  <div className="flex justify-between py-1.5 border-b border-border/40">
                     <span className="text-muted-foreground">
                       Comisión {commissionType === "luis" ? "Luis" : "Comercial"} ({commissionPct}%)
                     </span>
-                    <span className="font-medium text-amber-600">{fmtCurrency(totals.commissionAmount)}</span>
+                    <span className="font-medium">{fmtCurrency(totals.commissionAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between py-2 border-b-2 border-border">
+                <div className="flex justify-between py-2 bg-muted/30 px-2 rounded-md mt-1 mb-4">
                   <span className="font-semibold text-foreground">Total venta</span>
                   <span className="font-bold text-lg">{fmtCurrency(totals.totalSale)}</span>
                 </div>
-                <div className="flex justify-between py-1 text-xs">
-                  <span className="text-muted-foreground">Coste total</span>
-                  <span className="text-muted-foreground">{fmtCurrency(totals.totalCost)}</span>
+
+                {/* ── GASTOS ── */}
+                <div className="mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gastos</span>
                 </div>
-                <div className="flex justify-between py-1 text-xs">
-                  <span className="text-muted-foreground">Gastos fijos imputados</span>
-                  <span className="text-red-500">−{fmtCurrency(totals.totalFixedMonthly)}</span>
+                <div className="flex justify-between py-1.5 border-b border-border/40">
+                  <span className="text-muted-foreground">Coste personal</span>
+                  <span className="font-medium">{fmtCurrency(totals.costPersonal)}</span>
                 </div>
-                <div className="flex justify-between py-1 pt-2 border-t border-border">
-                  <span className="font-medium text-foreground">Margen bruto</span>
-                  <div className="text-right">
-                    <span className="font-semibold">{fmtCurrency(totals.grossMargin)}</span>
-                    <span className="text-xs text-muted-foreground ml-1">({totals.grossMarginPct.toFixed(1)}%)</span>
+                {totals.costComercial > 0 && (
+                  <div className="flex justify-between py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">Coste comercial</span>
+                    <span className="font-medium">{fmtCurrency(totals.costComercial)}</span>
                   </div>
+                )}
+                <div className="flex justify-between py-1.5 border-b border-border/40">
+                  <span className="text-muted-foreground">Coste gastos fijos</span>
+                  <span className="font-medium">{fmtCurrency(totals.costGastosFijos)}</span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="font-medium text-foreground">Margen neto</span>
-                  <div className="text-right">
-                    <span className="font-semibold">{fmtCurrency(totals.netMargin)}</span>
-                    <span className="text-xs text-muted-foreground ml-1">({totals.netMarginPct.toFixed(1)}%)</span>
+                <div className="flex justify-between py-2 bg-muted/30 px-2 rounded-md mt-1 mb-3">
+                  <span className="font-semibold text-foreground">Coste total</span>
+                  <span className="font-bold">{fmtCurrency(totals.totalCost)}</span>
+                </div>
+
+                {/* ── MÁRGENES ── */}
+                <div className="border-t-2 border-border pt-3 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-foreground">Margen bruto</span>
+                    <div className="text-right">
+                      <span className="font-semibold">{fmtCurrency(totals.grossMargin)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">({totals.grossMarginPct.toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-foreground">Margen neto</span>
+                    <div className="text-right">
+                      <span className={`font-semibold ${totals.netMarginPct < 20 && totals.totalSale > 0 ? "text-red-600" : "text-green-600"}`}>{fmtCurrency(totals.netMargin)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">({totals.netMarginPct.toFixed(1)}%)</span>
+                    </div>
                   </div>
                 </div>
 
                 {totals.netMarginPct < 20 && totals.totalSale > 0 && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mt-2">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mt-3">
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-red-700">
                       Margen por debajo del 20%. Revisa las jornadas o ajusta el precio antes de enviar.

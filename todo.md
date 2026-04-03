@@ -159,3 +159,6 @@
 
 ## Correcciones v2.6
 - [x] Bug: búsqueda de contactos Holded incompleta — la API no filtra por nombre, hay que traer todos los contactos con paginación completa, filtrar por nombre en servidor y devolver todos los campos disponibles
+
+## Mejoras v2.7
+- [x] Reestructurar resumen económico en dos secciones: VENTA (Subtotal trabajo, Gestión, Comisión) y GASTOS (Coste total, Coste personal, Coste comercial, Coste gastos fijos, Margen bruto, Margen neto)
