@@ -156,3 +156,6 @@
 - [x] Mapear correctamente todos los campos al API de Holded al crear el contacto
 - [x] Buscador de cliente en Holded con autocompletado: escribir nombre → buscar en Holded → seleccionar si existe (autocompleta campos) o crear nuevo
 - [x] Al guardar presupuesto: si el cliente no existe en Holded, crearlo automáticamente con todos los campos
+
+## Correcciones v2.6
+- [x] Bug: búsqueda de contactos Holded incompleta — la API no filtra por nombre, hay que traer todos los contactos con paginación completa, filtrar por nombre en servidor y devolver todos los campos disponibles

@@ -258,21 +258,40 @@ const holdedRouter = router({
       const config = await getIntegrationConfig("holded");
       if (!config?.apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Holded no está configurado." });
       try {
-        const contacts = await holdedGet(config.apiKey, `/contacts?name=${encodeURIComponent(input.query)}`);
+        // La API de Holded no filtra por nombre — devuelve todos los contactos en una sola página
+        const contacts = await holdedGet(config.apiKey, "/contacts");
         if (!Array.isArray(contacts)) return [];
-        return contacts.slice(0, 10).map((c: any) => ({
+
+        const q = input.query.toLowerCase().trim();
+        const filtered = q.length >= 2
+          ? contacts.filter((c: any) =>
+              (c.name ?? "").toLowerCase().includes(q) ||
+              (c.email ?? "").toLowerCase().includes(q) ||
+              (c.vatnumber ?? "").toLowerCase().includes(q) ||
+              (c.code ?? "").toLowerCase().includes(q)
+            )
+          : contacts;
+
+        return filtered.map((c: any) => ({
           id: c.id ?? "",
           name: c.name ?? "",
+          tradeName: c.tradeName ?? "",
           email: c.email ?? "",
-          vatnumber: c.vatnumber ?? "",
-          type: c.type ?? "company",
-          address: c.address ?? "",
-          city: c.city ?? "",
-          postalCode: c.postalCode ?? "",
-          province: c.province ?? "",
-          country: c.country ?? "España",
+          phone: c.phone ?? "",
           mobile: c.mobile ?? "",
-          website: c.website ?? "",
+          vatnumber: c.vatnumber || c.code || "",
+          // isperson: 0 = empresa, 1 = persona
+          type: c.isperson === 1 ? "person" : "company",
+          // Dirección dentro de billAddress
+          address: c.billAddress?.address ?? "",
+          city: c.billAddress?.city ?? "",
+          postalCode: c.billAddress?.postalCode ?? "",
+          province: c.billAddress?.province ?? "",
+          country: c.billAddress?.country ?? "España",
+          // Website dentro de socialNetworks
+          website: c.socialNetworks?.website ?? "",
+          // Tipo de contacto en Holded: client, supplier, debtor, creditor
+          contactType: c.type ?? "",
         }));
       } catch {
         return [];
@@ -291,6 +310,7 @@ const holdedRouter = router({
       province: z.string().optional(),
       country: z.string().optional(),
       mobile: z.string().optional(),
+      phone: z.string().optional(),
       website: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
@@ -299,19 +319,25 @@ const holdedRouter = router({
       try {
         const body: any = {
           name: input.name,
-          type: input.type ?? "company",
-          isPerson: input.type === "person",
-          clientRecord: true,
+          type: "client",
+          isperson: input.type === "person" ? 1 : 0,
         };
         if (input.email) body.email = input.email;
         if (input.vatnumber) body.vatnumber = input.vatnumber;
-        if (input.address) body.address = input.address;
-        if (input.city) body.city = input.city;
-        if (input.postalCode) body.postalCode = input.postalCode;
-        if (input.province) body.province = input.province;
-        if (input.country) body.country = input.country;
         if (input.mobile) body.mobile = input.mobile;
-        if (input.website) body.website = input.website;
+        if (input.phone) body.phone = input.phone;
+        // Dirección en billAddress
+        if (input.address || input.city || input.postalCode || input.province || input.country) {
+          body.billAddress = {
+            address: input.address ?? "",
+            city: input.city ?? "",
+            postalCode: input.postalCode ?? "",
+            province: input.province ?? "",
+            country: input.country ?? "España",
+          };
+        }
+        // Website en socialNetworks
+        if (input.website) body.socialNetworks = { website: input.website };
         const result = await holdedPost(config.apiKey, "/contacts", body);
         return { success: true, id: result.id ?? result.contactId ?? "", name: input.name };
       } catch (err: any) {

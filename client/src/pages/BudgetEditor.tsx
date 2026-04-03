@@ -140,7 +140,8 @@ export default function BudgetEditor() {
     setClientPostalCode(c.postalCode ?? "");
     setClientProvince(c.province ?? "");
     setClientCountry(c.country ?? "España");
-    setClientPhone(c.mobile ?? "");
+    // Móvil preferente, si no hay móvil usar teléfono
+    setClientPhone(c.mobile || c.phone || "");
     setClientWebsite(c.website ?? "");
     setHoldedContactId(c.id ?? "");
     setHoldedSearchOpen(false);
