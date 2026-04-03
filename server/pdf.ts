@@ -29,6 +29,7 @@ const AREA_LABELS: Record<string, string> = {
   seo: "SEO",
   design: "Diseño",
   development: "Desarrollo",
+  branding: "Branding",
   various: "Varios",
   management: "Gestión",
   commission: "Comisión",
@@ -75,7 +76,7 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
   const mgmtSale = subtotalSale * (mgmtPct / 100);
 
   // Group lines by area
-  const areaOrder = ["seo", "design", "development", "various"];
+  const areaOrder = ["seo", "design", "development", "branding", "various"];
   const linesByArea: Record<string, typeof workLines> = {};
   for (const area of areaOrder) {
     linesByArea[area] = workLines.filter(l => l.area === area);
@@ -88,7 +89,7 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
     const areaHours = areaLines.reduce((s, l) => s + parseFloat(String(l.estimatedDays ?? 0)), 0);
 
     const areaColors: Record<string, string> = {
-      seo: "#7c3aed", design: "#db2777", development: "#2563eb", various: "#ea580c"
+      seo: "#7c3aed", design: "#db2777", development: "#2563eb", branding: "#0d9488", various: "#ea580c"
     };
 
     return `
@@ -102,14 +103,14 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
       ${areaLines.map(l => `
         <tr>
           <td style="padding: 8px 12px; font-size: 12px; color: #323750;">${l.description}</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: center;">${parseFloat(String(l.estimatedDays)).toFixed(1)}h</td>
-          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: right;">${fmtCurrency(l.salePricePerDay)}/h</td>
+          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: center;">${l.isFixedPrice ? "—" : parseFloat(String(l.estimatedDays)).toFixed(1) + "j"}</td>
+          <td style="padding: 8px 12px; font-size: 12px; color: #707385; text-align: right;">${l.isFixedPrice ? "Precio cerrado" : fmtCurrency(l.salePricePerDay) + "/j"}</td>
           <td style="padding: 8px 12px; font-size: 12px; font-weight: 600; color: #080e2c; text-align: right;">${fmtCurrency(l.lineSale)}</td>
         </tr>
       `).join("")}
       <tr style="background: #fafbfc;">
         <td colspan="2" style="padding: 6px 12px; font-size: 11px; color: #9a9ca8; font-style: italic;">Subtotal ${AREA_LABELS[area]}</td>
-        <td style="padding: 6px 12px; font-size: 11px; color: #9a9ca8; text-align: right;">${areaHours.toFixed(1)}h total</td>
+        <td style="padding: 6px 12px; font-size: 11px; color: #9a9ca8; text-align: right;">${areaHours.toFixed(1)}j total</td>
         <td style="padding: 6px 12px; font-size: 12px; font-weight: 600; color: #323750; text-align: right;">${fmtCurrency(areaTotal)}</td>
       </tr>
     `;
@@ -226,7 +227,7 @@ function buildHtml(budget: PdfBudget, version: "client" | "internal"): string {
         <thead>
           <tr style="background: #080e2c;">
             <th style="padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Descripción</th>
-            <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Horas</th>
+            <th style="padding: 10px 12px; text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Jornadas</th>
             <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Tarifa</th>
             <th style="padding: 10px 12px; text-align: right; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em;">Total</th>
           </tr>

@@ -394,7 +394,10 @@ export default function BudgetEditor() {
 
   // Mutations
   const saveMutation = trpc.budgets.save.useMutation();
+  const sendEstimateMutation = trpc.holded.sendEstimate.useMutation();
+  const notifyMutation = trpc.system.notifyOwner.useMutation();
   const llmMutation = trpc.llm.recommend.useMutation();
+  const [isSendingToHolded, setIsSendingToHolded] = useState(false);
 
   const handleSave = async (status?: "draft" | "sent") => {
     if (!projectName.trim() || !clientName.trim()) {
@@ -474,10 +477,52 @@ export default function BudgetEditor() {
       });
       toast.success("Presupuesto guardado");
       if (isNew) navigate(`/presupuestos/${result.id}`);
+      return result;
     } catch (err: any) {
       toast.error(err.message ?? "Error al guardar");
+      return null;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendToHolded = async () => {
+    setIsSendingToHolded(true);
+    try {
+      // Primero guardar con status sent
+      const saved = await handleSave("sent");
+      if (!saved) return;
+
+      const savedBudgetId = budgetId ?? saved.id;
+      if (!savedBudgetId) {
+        toast.error("Error: no se pudo obtener el ID del presupuesto");
+        return;
+      }
+
+      // Enviar estimate a Holded
+      const result = await sendEstimateMutation.mutateAsync({
+        budgetId: savedBudgetId,
+        contactId: holdedContactId || undefined,
+        contactName: clientName,
+        contactEmail: clientEmail || undefined,
+      });
+
+      if (result.success) {
+        toast.success("Presupuesto enviado a Holded correctamente");
+        // Notificar al owner
+        try {
+          await notifyMutation.mutateAsync({
+            title: `Presupuesto enviado a Holded`,
+            content: `El presupuesto "${projectName}" para ${clientName} ha sido enviado a Holded como estimate. ID: ${result.holdedDocumentId ?? "N/A"}`,
+          });
+        } catch {
+          // No bloquear si la notificación falla
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message ?? "Error al enviar a Holded");
+    } finally {
+      setIsSendingToHolded(false);
     }
   };
 
@@ -503,7 +548,7 @@ export default function BudgetEditor() {
       return;
     }
     try {
-      const res = await fetch(`/api/pdf/${budgetId}?version=${version}`);
+      const res = await fetch(`/api/pdf/${budgetId}?version=${version}`, { credentials: "include" });
       if (!res.ok) throw new Error("Error generando PDF");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -558,13 +603,13 @@ export default function BudgetEditor() {
             </Button>
             <Button
               size="sm"
-              onClick={() => handleSave("sent")}
-              disabled={isSaving}
+              onClick={handleSendToHolded}
+              disabled={isSaving || isSendingToHolded}
               className="gap-1.5"
               style={{ background: "var(--brand-darkest)", color: "white" }}
             >
-              <Send className="w-3.5 h-3.5" />
-              Enviar
+              {isSendingToHolded ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Enviar a Holded
             </Button>
           </div>
         </div>

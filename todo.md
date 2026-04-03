@@ -165,3 +165,10 @@
 
 ## Correcciones v2.8
 - [x] Desglose por área: cambiar etiqueta de horas (h) a jornadas (j)
+
+## Correcciones v2.9
+- [x] Bug: generación de PDF de cliente no funciona — faltaba credentials:include en el fetch
+- [x] Bug: generación de PDF interno no funciona — mismo fix
+- [x] Bug: botón Enviar no funciona — ahora es "Enviar a Holded", guarda + crea estimate en Holded
+- [x] Notificación al owner cuando se envía un presupuesto a Holded
+- [x] PDF: etiquetas cambiadas de horas a jornadas, soporte para branding (precio cerrado)
