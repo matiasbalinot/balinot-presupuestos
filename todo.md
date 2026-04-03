@@ -230,3 +230,12 @@
 - [x] Bug: syncProjects importaba 0 — corregido: el plan gratuito de Clockify limita el rango a 365 días; ahora se hacen peticiones por año (2020…actual) y se acumulan las horas por trabajador
 - [x] Bug: tipología "Web corporativa" sobrante eliminada de la BD; ahora existen exactamente las 5 correctas
 - [x] Añadida tipología "Tienda online" a PROJECT_TYPE_PATTERNS (faltaba en el código)
+
+## Bugs v4.3
+- [x] Bug: error SQL en /histórico — corregido: la query usaba `realTotalDays > 0` pero la columna real en BD es `realTotalHours`
+- [x] Bug: cards de tipología mostraban "0 proyectos" — corregido: recalcProjectTypeAverages fallaba silenciosamente; se forzó el recálculo y se corrigió la query
+- [x] Bug: dropdown de tipología en /histórico mostraba "Web corporativa" sobrante — eliminada de la BD
+
+## Pendiente v4.4
+- [x] Verificar que el dropdown de tipología en /histórico no muestra tipologías legacy — la BD ya solo tiene las 5 correctas; el dropdown usa projectTypes.list que devuelve lo que hay en BD
+- [x] Añadir invalidación automática de caché tRPC en el frontend tras syncProjects — añadido refetchProjectTypes() en onSuccess de syncMutation y updateTypeMutation

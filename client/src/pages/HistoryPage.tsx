@@ -410,15 +410,16 @@ export default function HistoryPage() {
   const isAdmin = user?.role === "admin";
 
   const { data: history = [], refetch: refetchHistory, isLoading } = trpc.history.list.useQuery();
-  const { data: projectTypes = [] } = trpc.projectTypes.list.useQuery();
+  const { data: projectTypes = [], refetch: refetchProjectTypes } = trpc.projectTypes.list.useQuery();
   const updateTypeMutation = trpc.history.updateType.useMutation({
-    onSuccess: () => { toast.success("Tipología actualizada y medias recalculadas"); refetchHistory(); },
+    onSuccess: () => { toast.success("Tipología actualizada y medias recalculadas"); refetchHistory(); refetchProjectTypes(); },
     onError: (e) => toast.error(e.message),
   });
   const syncMutation = trpc.clockify.syncProjects.useMutation({
     onSuccess: (data) => {
       toast.success(`Sincronizados ${data.synced} proyectos de ${data.relevant} relevantes (${data.total} total)`);
       refetchHistory();
+      refetchProjectTypes();
     },
     onError: (e) => toast.error(e.message ?? "Error al sincronizar"),
   });

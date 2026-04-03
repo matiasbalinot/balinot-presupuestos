@@ -314,7 +314,7 @@ export async function recalcProjectTypeAverages(projectTypeId: number) {
   const rows = await db
     .select()
     .from(projectHistory)
-    .where(and(eq(projectHistory.projectTypeId, projectTypeId), sql`realTotalDays > 0`));
+    .where(and(eq(projectHistory.projectTypeId, projectTypeId), sql`realTotalHours > 0`));
 
   if (rows.length === 0) return;
 
