@@ -386,18 +386,22 @@ const holdedRouter = router({
       if (!budget) throw new TRPCError({ code: "NOT_FOUND" });
 
       // Usar el servicio de Holded seleccionado como única línea del estimate
-      const serviceName = (budget as any).holdedServiceName ?? budget.projectName;
-      const serviceDesc = (budget as any).holdedServiceDesc ?? "";
-      const totalSale = parseFloat(String((budget as any).totalSale ?? 0));
+      const serviceName = budget.holdedServiceName ?? budget.projectName;
+      const serviceDesc = budget.holdedServiceDesc ?? "";
+      const totalSale = parseFloat(String(budget.totalSale ?? 0));
+      const serviceId = budget.holdedServiceId;
 
-      const items = [{
+      const item: any = {
         name: serviceName,
         desc: serviceDesc,
         units: 1,
-        price: totalSale,
+        subtotal: totalSale,
         tax: 21,
-        ...(budget as any).holdedServiceId ? { serviceId: (budget as any).holdedServiceId } : {},
-      }];
+        taxes: ["s_iva_21"],
+      };
+      if (serviceId) item.serviceId = serviceId;
+
+      const items = [item];
 
       const body: any = {
         contactName: input.contactName,

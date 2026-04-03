@@ -180,3 +180,6 @@
 - [x] Corregir envío a Holded: enviar como línea de servicio (no desglose de trabajadores/jornadas)
 - [x] El estimate en Holded debe mostrar: servicio, descripción, precio total — sin desglose interno
 - [x] Bug: PDFs no se generan correctamente — cambiado a window.open para enviar cookies
+
+## Correcciones v3.1
+- [x] Bug: el estimate enviado a Holded no incluye el precio — corregido: spread ternario roto, añadido subtotal y taxes array
