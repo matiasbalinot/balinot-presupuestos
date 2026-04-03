@@ -222,7 +222,7 @@ export default function BudgetEditor() {
     const areaWorkers = workers.filter((w: any) => {
       if (area === "seo") return w.department === "seo";
       if (area === "design") return w.department === "design";
-      if (area === "development") return w.department === "development";
+      if (area === "development") return w.department === "development" || w.department === "external";
       if (area === "various") return w.department === "various";
       return false;
     });
@@ -615,9 +615,17 @@ export default function BudgetEditor() {
                               <SelectContent>
                                 <SelectItem value="none">Sin asignar</SelectItem>
                                 {(workers as any[])
-                                  .filter((w: any) => w.department === area || w.department === "various")
+                                  .filter((w: any) => {
+                                    if (w.department === area) return true;
+                                    if (w.department === "various") return true;
+                                    // External workers available in development area
+                                    if (w.department === "external" && area === "development") return true;
+                                    return false;
+                                  })
                                   .map((w: any) => (
-                                    <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>
+                                    <SelectItem key={w.id} value={String(w.id)}>
+                                      {w.department === "external" ? `${w.name} (ext.)` : w.name}
+                                    </SelectItem>
                                   ))}
                               </SelectContent>
                             </Select>

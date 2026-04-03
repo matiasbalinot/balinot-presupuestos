@@ -134,3 +134,6 @@
 - [x] Ajustar comisiones: opciones "Luis" y "Comercial" (por defecto 10%, editable por presupuesto)
 - [x] En calculadora: selector de comisión (ninguna / Luis / Comercial) con % editable
 - [x] La comisión siempre se suma como gasto al coste total del presupuesto
+
+## Correcciones v2.1
+- [ ] Alfonso Cala y MWM (externos) deben aparecer disponibles para asignar en el área de Desarrollo en la calculadora
