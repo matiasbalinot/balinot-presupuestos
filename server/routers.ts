@@ -6,6 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   createBudget,
+  deleteBudget,
   deleteBudgetLines,
   deleteWorker,
   getAllBudgets,
@@ -212,6 +213,13 @@ const budgetsRouter = router({
       const data: any = { status: input.status };
       if (input.status === "sent") data.sentAt = new Date();
       await updateBudget(input.id, data);
+      return { success: true };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteBudget(input.id);
       return { success: true };
     }),
 

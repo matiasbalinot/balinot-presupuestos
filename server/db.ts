@@ -214,6 +214,13 @@ export async function deleteBudgetLines(budgetId: number) {
   await db.delete(budgetLines).where(eq(budgetLines.budgetId, budgetId));
 }
 
+export async function deleteBudget(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(budgetLines).where(eq(budgetLines.budgetId, id));
+  await db.delete(budgets).where(eq(budgets.id, id));
+}
+
 export async function insertBudgetLines(lines: InsertBudgetLine[]) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

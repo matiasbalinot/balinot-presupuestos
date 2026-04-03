@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import {
   AlertTriangle,
@@ -184,6 +194,7 @@ export default function BudgetEditor() {
   const [holdedServicePrice, setHoldedServicePrice] = useState("");
   const [taxKey, setTaxKey] = useState("s_iva_21");
   const [taxRate, setTaxRate] = useState("21");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Load existing budget
   useEffect(() => {
@@ -412,6 +423,13 @@ export default function BudgetEditor() {
   const sendEstimateMutation = trpc.holded.sendEstimate.useMutation();
   const notifyMutation = trpc.system.notifyOwner.useMutation();
   const llmMutation = trpc.llm.recommend.useMutation();
+  const deleteMutation = trpc.budgets.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Presupuesto eliminado");
+      navigate("/presupuestos");
+    },
+    onError: () => toast.error("Error al eliminar el presupuesto"),
+  });
   const [isSendingToHolded, setIsSendingToHolded] = useState(false);
 
   const handleSave = async (status?: "draft" | "sent") => {
@@ -621,6 +639,17 @@ export default function BudgetEditor() {
               {isSendingToHolded ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               Enviar a Holded
             </Button>
+            {!isNew && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1337,6 +1366,28 @@ export default function BudgetEditor() {
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar presupuesto</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar el presupuesto <strong>{projectName || existingBudget?.projectName}</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => budgetId && deleteMutation.mutate({ id: budgetId })}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

@@ -187,3 +187,9 @@
 ## Mejoras v3.2
 - [x] Selector de tipo de impuesto en la calculadora (IVA 21% por defecto, configurable)
 - [x] Guardar tipo de impuesto en BD y usarlo en resumen económico y envío a Holded
+
+## Mejoras v3.3
+- [x] Endpoint backend para eliminar presupuesto (con sus líneas asociadas)
+- [x] Botón eliminar presupuesto dentro de la calculadora (BudgetEditor) con confirmación
+- [x] Botón eliminar presupuesto en la lista de presupuestos (acciones) con confirmación
+- [x] Acciones aceptar/rechazar presupuesto en la lista de presupuestos

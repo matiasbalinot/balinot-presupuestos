@@ -5,15 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
 import {
   ArrowRight,
+  Check,
   Copy,
   Edit,
   FileText,
+  MoreHorizontal,
   Plus,
   Search,
   Send,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -34,6 +55,7 @@ export default function BudgetList() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const { data: budgets = [], isLoading, refetch } = trpc.budgets.list.useQuery();
   const duplicateMutation = trpc.budgets.duplicate.useMutation({
@@ -47,6 +69,14 @@ export default function BudgetList() {
   const updateStatusMutation = trpc.budgets.updateStatus.useMutation({
     onSuccess: () => { toast.success("Estado actualizado"); refetch(); },
     onError: () => toast.error("Error al actualizar el estado"),
+  });
+  const deleteMutation = trpc.budgets.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Presupuesto eliminado");
+      setDeleteTarget(null);
+      refetch();
+    },
+    onError: () => toast.error("Error al eliminar el presupuesto"),
   });
 
   const filtered = useMemo(() => {
@@ -182,33 +212,82 @@ export default function BudgetList() {
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                   </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    title="Duplicar"
-                    onClick={() => duplicateMutation.mutate({ id: budget.id })}
-                    disabled={duplicateMutation.isPending}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
-                  {budget.status === "draft" && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Marcar como enviado"
-                      onClick={() => updateStatusMutation.mutate({ id: budget.id, status: "sent" })}
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onClick={() => duplicateMutation.mutate({ id: budget.id })}
+                        disabled={duplicateMutation.isPending}
+                      >
+                        <Copy className="w-3.5 h-3.5 mr-2" />
+                        Duplicar
+                      </DropdownMenuItem>
+                      {budget.status === "draft" && (
+                        <DropdownMenuItem
+                          onClick={() => updateStatusMutation.mutate({ id: budget.id, status: "sent" })}
+                        >
+                          <Send className="w-3.5 h-3.5 mr-2" />
+                          Marcar como enviado
+                        </DropdownMenuItem>
+                      )}
+                      {(budget.status === "sent" || budget.status === "draft") && (
+                        <DropdownMenuItem
+                          onClick={() => updateStatusMutation.mutate({ id: budget.id, status: "accepted" })}
+                        >
+                          <Check className="w-3.5 h-3.5 mr-2 text-green-600" />
+                          Marcar como aceptado
+                        </DropdownMenuItem>
+                      )}
+                      {(budget.status === "sent" || budget.status === "draft") && (
+                        <DropdownMenuItem
+                          onClick={() => updateStatusMutation.mutate({ id: budget.id, status: "rejected" })}
+                        >
+                          <X className="w-3.5 h-3.5 mr-2 text-red-500" />
+                          Marcar como rechazado
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeleteTarget({ id: budget.id, name: budget.projectName })}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-2" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar presupuesto</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar el presupuesto <strong>{deleteTarget?.name}</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id })}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
