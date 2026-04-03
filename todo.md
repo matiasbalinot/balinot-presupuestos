@@ -142,3 +142,7 @@
 - [x] Sección Varios: mostrar todos los trabajadores internos de Balinot (no externos)
 - [x] Nueva sección Branding en la calculadora: Rafa como responsable, precio cerrado (coste 1.300€ / venta 2.500€), editable como el resto
 - [x] Branding disponible en cualquier tipo de proyecto (no vinculado a tipología)
+
+## Correcciones v2.3
+- [x] Branding: eliminar selector de trabajador — es un servicio a precio cerrado, no por trabajador
+- [x] Branding: columnas en orden Coste primero, Venta después

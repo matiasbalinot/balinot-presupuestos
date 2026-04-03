@@ -224,29 +224,38 @@ export default function BudgetEditor() {
 
   // Add line
   const addLine = (area: Area) => {
+    if (area === "branding") {
+      // Branding is a fixed-price service (not per-worker)
+      const newLine: BudgetLine = calcLine({
+        tempId: uid(), workerId: null, area,
+        description: "Branding",
+        estimatedDays: "1",
+        costPerDay: "1300",
+        salePricePerDay: "2500",
+        lineCost: "0", lineSale: "0",
+        isFixedPrice: true,
+        fixedPrice: "2500",
+        sortOrder: lines.length,
+      });
+      setLines([...lines, newLine]);
+      return;
+    }
     const areaWorkers = workers.filter((w: any) => {
       if (area === "seo") return w.department === "seo";
       if (area === "design") return w.department === "design";
       if (area === "development") return w.department === "development" || w.department === "external";
-      if (area === "branding") return w.department === "design"; // Rafa is in design
-      if (area === "various") return !w.isExternal; // All internal Balinot workers
+      if (area === "various") return !w.isExternal;
       return false;
     });
-    // For branding: prefer Rafa, use fixed price (cost 1300, sale 2500)
-    const rafa = area === "branding"
-      ? areaWorkers.find((w: any) => w.name.toLowerCase().includes("rafa")) ?? areaWorkers[0]
-      : areaWorkers[0];
-    const w = rafa;
-    const isBranding = area === "branding";
+    const w = areaWorkers[0];
     const newLine: BudgetLine = calcLine({
       tempId: uid(), workerId: w?.id ?? null, area,
-      description: isBranding ? `Branding${w ? ` — ${w.name}` : ""}` : `${AREA_LABELS[area]}${w ? ` — ${w.name}` : ""}`,
-      estimatedDays: "1",
-      costPerDay: isBranding ? "1300" : String(w?.costPerDay ?? "0"),
-      salePricePerDay: isBranding ? "2500" : String(w?.salePricePerDay ?? "0"),
+      description: `${AREA_LABELS[area]}${w ? ` — ${w.name}` : ""}`,
+      estimatedDays: "0",
+      costPerDay: String(w?.costPerDay ?? "0"),
+      salePricePerDay: String(w?.salePricePerDay ?? "0"),
       lineCost: "0", lineSale: "0",
-      isFixedPrice: isBranding,
-      fixedPrice: isBranding ? "2500" : "0",
+      isFixedPrice: false, fixedPrice: "0",
       sortOrder: lines.length,
     });
     setLines([...lines, newLine]);
@@ -598,132 +607,138 @@ export default function BudgetEditor() {
                   ) : (
                     <div className="space-y-3">
                       {/* Column headers */}
-                      <div className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 px-1">
-                        <span className="text-xs text-muted-foreground">Descripción / Trabajador</span>
-                        {area === "branding" ? (
-                          <span className="text-xs text-muted-foreground text-center col-span-3">Precio cerrado</span>
-                        ) : (
-                          <>
-                            <span className="text-xs text-muted-foreground text-center">Jornadas</span>
-                            <span className="text-xs text-muted-foreground text-right">€/j coste</span>
-                            <span className="text-xs text-muted-foreground text-right">€/j venta</span>
-                          </>
-                        )}
-                        <span className="text-xs text-muted-foreground text-right">Coste</span>
-                        <span className="text-xs text-muted-foreground text-right">Venta</span>
-                        <span />
-                      </div>
+                      {area === "branding" ? (
+                        <div className="grid grid-cols-[1fr_120px_120px_32px] gap-2 px-1">
+                          <span className="text-xs text-muted-foreground">Descripción del servicio</span>
+                          <span className="text-xs text-muted-foreground text-right">Coste</span>
+                          <span className="text-xs text-muted-foreground text-right">Precio venta</span>
+                          <span />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 px-1">
+                          <span className="text-xs text-muted-foreground">Descripción / Trabajador</span>
+                          <span className="text-xs text-muted-foreground text-center">Jornadas</span>
+                          <span className="text-xs text-muted-foreground text-right">€/j coste</span>
+                          <span className="text-xs text-muted-foreground text-right">€/j venta</span>
+                          <span className="text-xs text-muted-foreground text-right">Coste</span>
+                          <span className="text-xs text-muted-foreground text-right">Venta</span>
+                          <span />
+                        </div>
+                      )}
 
                       {linesByArea(area).map(line => (
-                        <div key={line.tempId} className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 items-center bg-muted/20 rounded-lg px-2 py-2">
-                          {/* Description + worker */}
-                          <div className="space-y-1 min-w-0">
+                        area === "branding" ? (
+                          /* Branding row: fixed-price service, no worker selector */
+                          <div key={line.tempId} className="grid grid-cols-[1fr_120px_120px_32px] gap-2 items-center bg-muted/20 rounded-lg px-2 py-2">
                             <Input
                               value={line.description}
                               onChange={e => updateLine(line.tempId, { description: e.target.value })}
                               className="h-7 text-xs"
-                              placeholder="Descripción"
+                              placeholder="Descripción del servicio"
                             />
-                            <Select
-                              value={line.workerId ? String(line.workerId) : "none"}
-                              onValueChange={v => updateLine(line.tempId, { workerId: v === "none" ? null : parseInt(v) })}
+                            <Input
+                              type="number"
+                              value={line.costPerDay}
+                              onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
+                              className="h-7 text-xs text-right"
+                              min="0"
+                              placeholder="Coste"
+                            />
+                            <Input
+                              type="number"
+                              value={line.fixedPrice}
+                              onChange={e => updateLine(line.tempId, { fixedPrice: e.target.value })}
+                              className="h-7 text-xs text-right"
+                              min="0"
+                              placeholder="Precio venta"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeLine(line.tempId)}
                             >
-                              <SelectTrigger className="h-6 text-xs">
-                                <SelectValue placeholder="Trabajador" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Sin asignar</SelectItem>
-                                {(workers as any[])
-                                  .filter((w: any) => {
-                                    // Branding: only design workers (Rafa)
-                                    if (area === "branding") return w.department === "design";
-                                    // Various: all internal Balinot workers (no externals)
-                                    if (area === "various") return !w.isExternal;
-                                    // Development: internal dev + external workers
-                                    if (area === "development") return w.department === "development" || w.department === "external";
-                                    // Other areas: exact department match
-                                    return w.department === area;
-                                  })
-                                  .map((w: any) => (
-                                    <SelectItem key={w.id} value={String(w.id)}>
-                                      {w.department === "external" ? `${w.name} (ext.)` : w.name}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
+                              <X className="w-3 h-3" />
+                            </Button>
                           </div>
-
-                          {/* Days / Fixed price for branding */}
-                          {line.isFixedPrice ? (
-                            <>
-                              {/* Fixed price: sale price editable, spans 3 cols */}
-                              <div className="col-span-3 flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Venta:</span>
-                                <Input
-                                  type="number"
-                                  value={line.fixedPrice}
-                                  onChange={e => updateLine(line.tempId, { fixedPrice: e.target.value })}
-                                  className="h-7 text-xs text-right flex-1"
-                                  min="0"
-                                  placeholder="Precio venta"
-                                />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Coste:</span>
-                                <Input
-                                  type="number"
-                                  value={line.costPerDay}
-                                  onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
-                                  className="h-7 text-xs text-right flex-1"
-                                  min="0"
-                                  placeholder="Coste"
-                                />
-                              </div>
-                            </>
-                          ) : (
-                            <>
+                        ) : (
+                          /* Standard row: days-based with worker selector */
+                          <div key={line.tempId} className="grid grid-cols-[1fr_100px_80px_80px_80px_80px_32px] gap-2 items-center bg-muted/20 rounded-lg px-2 py-2">
+                            {/* Description + worker */}
+                            <div className="space-y-1 min-w-0">
                               <Input
-                                type="number"
-                                value={line.estimatedDays}
-                                onChange={e => updateLine(line.tempId, { estimatedDays: e.target.value })}
-                                className="h-7 text-xs text-center"
-                                min="0" step="0.5"
+                                value={line.description}
+                                onChange={e => updateLine(line.tempId, { description: e.target.value })}
+                                className="h-7 text-xs"
+                                placeholder="Descripción"
                               />
-                              <Input
-                                type="number"
-                                value={line.costPerDay}
-                                onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
-                                className="h-7 text-xs text-right"
-                                min="0"
-                              />
-                              <Input
-                                type="number"
-                                value={line.salePricePerDay}
-                                onChange={e => updateLine(line.tempId, { salePricePerDay: e.target.value })}
-                                className="h-7 text-xs text-right"
-                                min="0"
-                              />
-                            </>
-                          )}
+                              <Select
+                                value={line.workerId ? String(line.workerId) : "none"}
+                                onValueChange={v => updateLine(line.tempId, { workerId: v === "none" ? null : parseInt(v) })}
+                              >
+                                <SelectTrigger className="h-6 text-xs">
+                                  <SelectValue placeholder="Trabajador" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Sin asignar</SelectItem>
+                                  {(workers as any[])
+                                    .filter((w: any) => {
+                                      if (area === "various") return !w.isExternal;
+                                      if (area === "development") return w.department === "development" || w.department === "external";
+                                      return w.department === area;
+                                    })
+                                    .map((w: any) => (
+                                      <SelectItem key={w.id} value={String(w.id)}>
+                                        {w.department === "external" ? `${w.name} (ext.)` : w.name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                          {/* Line cost */}
-                          <span className="text-xs text-right text-muted-foreground font-mono">
-                            {fmtCurrency(line.lineCost)}
-                          </span>
-
-                          {/* Line sale */}
-                          <span className="text-xs text-right font-semibold font-mono">
-                            {fmtCurrency(line.lineSale)}
-                          </span>
-
-                          {/* Remove */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeLine(line.tempId)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
+                            {/* Days */}
+                            <Input
+                              type="number"
+                              value={line.estimatedDays}
+                              onChange={e => updateLine(line.tempId, { estimatedDays: e.target.value })}
+                              className="h-7 text-xs text-center"
+                              min="0" step="0.5"
+                            />
+                            {/* Cost/day */}
+                            <Input
+                              type="number"
+                              value={line.costPerDay}
+                              onChange={e => updateLine(line.tempId, { costPerDay: e.target.value })}
+                              className="h-7 text-xs text-right"
+                              min="0"
+                            />
+                            {/* Sale/day */}
+                            <Input
+                              type="number"
+                              value={line.salePricePerDay}
+                              onChange={e => updateLine(line.tempId, { salePricePerDay: e.target.value })}
+                              className="h-7 text-xs text-right"
+                              min="0"
+                            />
+                            {/* Line cost */}
+                            <span className="text-xs text-right text-muted-foreground font-mono">
+                              {fmtCurrency(line.lineCost)}
+                            </span>
+                            {/* Line sale */}
+                            <span className="text-xs text-right font-semibold font-mono">
+                              {fmtCurrency(line.lineSale)}
+                            </span>
+                            {/* Remove */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeLine(line.tempId)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )
                       ))}
                     </div>
                   )}
